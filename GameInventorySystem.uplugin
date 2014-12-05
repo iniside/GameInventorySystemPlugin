@@ -17,6 +17,11 @@
             "Name": "GameInventorySystem",
             "Type": "Runtime",
 			"LoadingPhase" : "PreDefault"
-        }
-	]
+        },
+        {
+			"Name" : "GameInventorySystemEditor",
+			"Type" : "Editor"
+		}
+    ],
+    "CanContainContent" : true
 }

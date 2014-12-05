@@ -14,14 +14,20 @@ public:
 		if it implement interface, which is used to retrieve properties out of object for display.
 	*/
 	UPROPERTY(BlueprintReadWrite, Category = "Item")
-	TSubclassOf<UObject> Item;
+	UGISItemData* Item;
 }
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FGISOnItemAdded, int32, NewSlot, class UGISItemData*, ItemDataOut);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FGISOnItemSlotSwapped, int32, LastSlotIndex, class UGISItemData*, LastSlotData, int32, TargetSlot, class UGISItemData*, TargetSlotData);
 
 UCLASS(hidecategories = (Object, LOD, Lighting, Transform, Sockets, TextureStreaming), editinlinenew, meta = (BlueprintSpawnableComponent))
 class GAMEINVENTORYSYSTEM_API UGISInventoryComponent : public UActorComponent
 {
 	GENERATED_UCLASS_BODY()
 public:
+
+	UPROPERTY()
+		int32 InventorySize;
 	/*
 		Indicates if items can be activated directly in invetory window.
 		Useful if you want to prevent player from activating items in invetory. For example
@@ -58,15 +64,17 @@ public:
 	and make it authority callable only.
 	*/
 	UFUNCTION(BlueprintCallable, Category="Game Inventory System")
-	void AddItemToInventory(class UGISItemData* ItemIn);
+		void AddItemToInventory(class UGISItemData* ItemIn);
 
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerAddItemToInventory(class UGISItemData* ItemIn);
 
 
 	UFUNCTION(BlueprintCallable, Category = "Game Inventory System")
-		void AddItemOnSlot(int32 TargetSlot, int32 LastSlot, class UGISItemData* ItemData);
+		void AddItemOnSlot(int32 TargetSlot, int32 LastSlot);
 
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerAddItemOnSlot(int32 TargetSlot, int32 LastSlot);
 	/*
 		Heyyy client, would you be so nice, and update this slot with this item ? Thanks!
 
@@ -85,6 +93,10 @@ public:
 	*/
 	virtual bool ReplicateSubobjects(class UActorChannel *Channel, class FOutBunch *Bunch, FReplicationFlags *RepFlags) override;
 	virtual void GetSubobjectsWithStableNamesForNetworking(TArray<UObject*>& Objs) override;
+
+
+private:
+	void InitializeInventory();
 };
 
 
