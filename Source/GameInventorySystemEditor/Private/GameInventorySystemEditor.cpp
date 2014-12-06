@@ -11,7 +11,7 @@ class FGameInventorySystemEditor : public IGameInventorySystemEditor
 	virtual void ShutdownModule() override;
 };
 
-IMPLEMENT_MODULE(FGameInventorySystemEditor, GameAttributesEditor)
+IMPLEMENT_MODULE(FGameInventorySystemEditor, GameInventorySystemEditor)
 
 
 void FGameInventorySystemEditor::StartupModule()

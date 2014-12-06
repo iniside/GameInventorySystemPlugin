@@ -8,6 +8,8 @@ struct GAMEINVENTORYSYSTEM_API FGISItemDataWrapper
 	GENERATED_USTRUCT_BODY()
 public:
 	int32 LastItemIndex;
+	//we don't want to change this property in blueprint. Not intentionally, nor by accident.
+	UPROPERTY(BlueprintReadOnly)
 	int32 CurrentItemIndex;
 	/*
 		We don't care about item type. Get CDO of object and Cast it to check
@@ -15,7 +17,56 @@ public:
 	*/
 	UPROPERTY(BlueprintReadWrite, Category = "Item")
 	UGISItemData* Item;
-}
+};
+
+USTRUCT(BlueprintType)
+struct GAMEINVENTORYSYSTEM_API FGISSlotInfo
+{
+	GENERATED_USTRUCT_BODY()
+public:
+	UPROPERTY(BlueprintReadOnly)
+		int8 SlotIndex;
+	UPROPERTY(BlueprintReadWrite)
+		UGISItemData* ItemData;
+};
+
+USTRUCT(BlueprintType)
+struct GAMEINVENTORYSYSTEM_API FGISTabInfo
+{
+	GENERATED_USTRUCT_BODY()
+public:
+
+	UPROPERTY(BlueprintReadOnly)
+		int8 TabIndex;
+
+	UPROPERTY(BlueprintReadWrite)
+		int8 NumberOfSlots;
+
+	UPROPERTY(BlueprintReadOnly)
+		TArray<FGISSlotInfo> TabSlots;
+};
+
+USTRUCT(BlueprintType)
+struct GAMEINVENTORYSYSTEM_API FGISInventoryTab
+{
+	GENERATED_USTRUCT_BODY()
+public:
+	UPROPERTY(BlueprintReadWrite)
+		int8 NumberOfTabs;
+
+	UPROPERTY(BlueprintReadOnly)
+		TArray<FGISTabInfo> InventoryTabs;
+};
+
+USTRUCT()
+struct FGISSlotsInTab
+{
+	GENERATED_USTRUCT_BODY()
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int32 NumberOfSlots;
+};
+
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FGISOnItemAdded, int32, NewSlot, class UGISItemData*, ItemDataOut);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FGISOnItemSlotSwapped, int32, LastSlotIndex, class UGISItemData*, LastSlotData, int32, TargetSlot, class UGISItemData*, TargetSlotData);
@@ -28,6 +79,10 @@ public:
 
 	UPROPERTY()
 		int32 InventorySize;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		TArray <FGISSlotsInTab> InitialTabInfo;
+
 	/*
 		Indicates if items can be activated directly in invetory window.
 		Useful if you want to prevent player from activating items in invetory. For example
@@ -40,13 +95,21 @@ public:
 		etc.
 		Because right now I have no way of really knowing, which position item is, or on what
 		position it was previously, because order of Dynamic Array is not guaranteed.
-<<<<<<< HEAD
 
 		Index order of this array should be stable. It's not sorted in anyway, but also items never change position inside it.
 		Only data contained within struct is changed, while struct itself remain intact.
+
+		Once this is done and working, refactor this into Tabs.
+		Inventory can have multiple Tabs(Bags ?), and each tab can have X slots.
 	*/
 	UPROPERTY(BlueprintReadWrite, Replicated, Category = "Inventory")
 		TArray<FGISItemDataWrapper> ItemsInInventory;
+
+	/*
+		Initial take on inventory tabs.
+	*/
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category = "Inventory")
+		FGISInventoryTab Tabs;
 
 	UPROPERTY(BlueprintCallable, BlueprintAssignable)
 		FGISOnItemAdded OnItemAdded;
@@ -55,6 +118,9 @@ public:
 		FGISOnItemSlotSwapped OnItemSlotSwapped;
 
 
+
+	virtual void InitializeComponent() override;
+	virtual void PostInitProperties() override;
 	/* some changes for git.
 	Testing Function1
 	Technically you never should call this function from client, in client-server environment. NEVER
@@ -74,7 +140,7 @@ public:
 		void AddItemOnSlot(int32 TargetSlot, int32 LastSlot);
 
 	UFUNCTION(Server, Reliable, WithValidation)
-	void ServerAddItemOnSlot(int32 TargetSlot, int32 LastSlot);
+		void ServerAddItemOnSlot(int32 TargetSlot, int32 LastSlot);
 	/*
 		Heyyy client, would you be so nice, and update this slot with this item ? Thanks!
 
@@ -87,6 +153,9 @@ public:
 	UFUNCTION(Client, Reliable)
 		void ClientSlotSwap(int32 LastSlotIndex, class UGISItemData* LastSlotData, int32 TargetSlot, class UGISItemData* TargetSlotData);
 
+
+	void PostInventoryInitialized();
+
 	/*
 		Invenory UObject replication support
 
@@ -97,6 +166,7 @@ public:
 
 private:
 	void InitializeInventory();
+	void InitializeInventoryTabs();
 };
 
 

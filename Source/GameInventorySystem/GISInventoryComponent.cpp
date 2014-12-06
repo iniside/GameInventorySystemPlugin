@@ -13,10 +13,21 @@ UGISInventoryComponent::UGISInventoryComponent(const FObjectInitializer& ObjectI
 	: Super(ObjectInitializer)
 {
 	InventorySize = 50;
+	bWantsInitializeComponent = true;
 	InitializeInventory();
 }
 
 
+void UGISInventoryComponent::InitializeComponent()
+{
+	Super::InitializeComponent();
+	InitializeInventoryTabs();
+}
+void UGISInventoryComponent::PostInitProperties()
+{
+	Super::PostInitProperties();
+	
+}
 void UGISInventoryComponent::AddItemToInventory(class UGISItemData* ItemIn)
 {
 	if (GetOwnerRole() < ROLE_Authority)
@@ -62,7 +73,7 @@ void UGISInventoryComponent::AddItemOnSlot(int32 TargetSlot, int32 LastSlot)
 			UGISItemData* LastItem = ItemsInInventory[TargetSlot].Item;
 
 			ItemsInInventory[TargetSlot].Item = TargetItem;
-
+			ItemsInInventory[LastSlot].Item = nullptr;
 			ClientSlotSwap(LastSlot, LastItem, TargetSlot, TargetItem);
 		}
 		else
@@ -96,7 +107,7 @@ void UGISInventoryComponent::ClientSlotSwap_Implementation(int32 LastSlotIndex, 
 }
 void UGISInventoryComponent::InitializeInventory()
 {
-	for (int32 Index; Index < InventorySize; Index++)
+	for (int32 Index = 0; Index < InventorySize; Index++)
 	{
 		FGISItemDataWrapper newItem;
 		newItem.CurrentItemIndex = Index;
@@ -105,6 +116,39 @@ void UGISInventoryComponent::InitializeInventory()
 		ItemsInInventory.Add(newItem);
 	}
 }
+
+void UGISInventoryComponent::InitializeInventoryTabs()
+{
+	int8 counter = 0;
+	for (const FGISSlotsInTab& SlotInfo : InitialTabInfo)
+	{
+
+		FGISTabInfo TabInfo;
+		TabInfo.NumberOfSlots = SlotInfo.NumberOfSlots;
+		TabInfo.TabIndex = counter;
+
+		for (int32 Index = 0; Index < SlotInfo.NumberOfSlots; Index++)
+		{
+			FGISSlotInfo SlotInfo;
+			SlotInfo.SlotIndex = Index;
+			SlotInfo.ItemData = nullptr;
+			TabInfo.TabSlots.Add(SlotInfo);
+		}
+		
+		Tabs.InventoryTabs.Add(TabInfo);
+		counter++;
+	}
+	PostInventoryInitialized();
+}
+
+void UGISInventoryComponent::GetLifetimeReplicatedProps(TArray< class FLifetimeProperty > & OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME_CONDITION(UGISInventoryComponent, ItemsInInventory, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(UGISInventoryComponent, Tabs, COND_OwnerOnly);
+}
+
 bool UGISInventoryComponent::ReplicateSubobjects(class UActorChannel *Channel, class FOutBunch *Bunch, FReplicationFlags *RepFlags)
 {
 	bool WroteSomething = Super::ReplicateSubobjects(Channel, Bunch, RepFlags);
@@ -117,6 +161,18 @@ bool UGISInventoryComponent::ReplicateSubobjects(class UActorChannel *Channel, c
 		}
 	}
 
+	for (const FGISTabInfo& TabInfo : Tabs.InventoryTabs)
+	{
+		for (const FGISSlotInfo& SlotItem : TabInfo.TabSlots)
+		{
+			if (SlotItem.ItemData)
+			{
+				WroteSomething |= Channel->ReplicateSubobject(const_cast<UGISItemData*>(SlotItem.ItemData), *Bunch, *RepFlags);
+			}
+		}
+	}
+	
+
 	return WroteSomething;
 }
 void UGISInventoryComponent::GetSubobjectsWithStableNamesForNetworking(TArray<UObject*>& Objs)
@@ -126,6 +182,16 @@ void UGISInventoryComponent::GetSubobjectsWithStableNamesForNetworking(TArray<UO
 		if (item.Item && item.Item->IsNameStableForNetworking())
 		{
 			Objs.Add(const_cast<UGISItemData*>(item.Item));
+		}
+	}
+	for (const FGISTabInfo& TabInfo : Tabs.InventoryTabs)
+	{
+		for (const FGISSlotInfo& SlotItem : TabInfo.TabSlots)
+		{
+			if (SlotItem.ItemData)
+			{
+				Objs.Add(const_cast<UGISItemData*>(SlotItem.ItemData));
+			}
 		}
 	}
 }
