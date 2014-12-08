@@ -121,6 +121,31 @@ public:
 
 	virtual void InitializeComponent() override;
 	virtual void PostInitProperties() override;
+
+
+	/*
+		Initial draft for picking up items from world.
+
+
+		First you need to find item. This part is somewhat game specific, you need use radial sweep,
+		line trace etc, to find items.
+
+		The important part, is the fact that trace should happen ON SERVER, to make sure that
+		item is in that place.
+
+		Once item has been found, we will call PickItem function and pass Actor pointer to it.
+		There is no reason to use UObject as UObjects can't be placed on level.
+
+		Pickable actor should implement special interface, 
+		which I have not yet decided how it will look ;/.
+	*/
+	UFUNCTION(BlueprintCallable, Category = "Game InventorySystem")
+		void PickItem(AActor* PickupItemIn);
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerPickItem(AActor* PickupItemIn);
+		
+
 	/* some changes for git.
 	Testing Function1
 	Technically you never should call this function from client, in client-server environment. NEVER

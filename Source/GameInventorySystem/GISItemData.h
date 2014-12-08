@@ -11,13 +11,13 @@
 
 	If you so desire, you can of course just extend any item from this class but I do not recommend it.
 */
-UCLASS(BlueprintType, Blueprintable)
+UCLASS(BlueprintType, Blueprintable, DefaultToInstanced, EditInlineNew)
 class GAMEINVENTORYSYSTEM_API UGISItemData : public UObject
 {
 	GENERATED_UCLASS_BODY()
 public:
-	UPROPERTY()
-		int32 ItemIndex;
+	UPROPERTY(EditAnywhere)
+		bool bCanBeAddedToHotbar;
 
 	bool IsNameStableForNetworking() const override;
 

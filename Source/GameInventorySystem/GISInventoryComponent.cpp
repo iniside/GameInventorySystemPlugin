@@ -2,7 +2,10 @@
 
 #include "GameInventorySystem.h"
 
+#include "GISGlobalTypes.h"
+
 #include "GISItemData.h"
+#include "IGISPickupItem.h"
 
 #include "Net/UnrealNetwork.h"
 #include "Engine/ActorChannel.h"
@@ -27,6 +30,31 @@ void UGISInventoryComponent::PostInitProperties()
 {
 	Super::PostInitProperties();
 	
+}
+
+void UGISInventoryComponent::PickItem(AActor* PickupItemIn)
+{
+	if (GetOwnerRole() < ROLE_Authority)
+	{
+		ServerPickItem(PickupItemIn);
+	}
+	else
+	{
+		IIGISPickupItem* pickupItem = Cast<IIGISPickupItem>(PickupItemIn);
+		if (pickupItem)
+		{
+			//do something, I'm not sure what yet.
+		}
+	}
+}
+
+void UGISInventoryComponent::ServerPickItem_Implementation(AActor* PickupItemIn)
+{
+	PickItem(PickupItemIn);
+}
+bool UGISInventoryComponent::ServerPickItem_Validate(AActor* PickupItemIn)
+{
+	return true;
 }
 void UGISInventoryComponent::AddItemToInventory(class UGISItemData* ItemIn)
 {
@@ -139,6 +167,11 @@ void UGISInventoryComponent::InitializeInventoryTabs()
 		counter++;
 	}
 	PostInventoryInitialized();
+}
+
+void UGISInventoryComponent::PostInventoryInitialized()
+{
+
 }
 
 void UGISInventoryComponent::GetLifetimeReplicatedProps(TArray< class FLifetimeProperty > & OutLifetimeProps) const
