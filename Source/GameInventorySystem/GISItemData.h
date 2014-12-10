@@ -45,6 +45,13 @@ public:
 	virtual void ActivateItem() {}
 
 	/*
+		Don't like this crap, but it is best way to expose it to blueprint (;.
+	*/
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Input")
+		bool OnKeyPressedDown();
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Input")
+		bool OnKeyPressedUp();
+	/*
 		Below is mainly for convinience. We could just as well use Cast<> to determine class type.
 		And at some point you will have to do Cast. To get item from inventory for example.
 		But you don't need if you want to, for example just iterate over all items

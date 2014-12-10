@@ -3,9 +3,8 @@
 #include "GameInventorySystem.h"
 
 #include "GISGlobalTypes.h"
-
 #include "GISItemData.h"
-#include "IGISPickupItem.h"
+#include "Widgets/GISContainerBase.h"
 
 #include "Net/UnrealNetwork.h"
 #include "Engine/ActorChannel.h"
@@ -15,47 +14,27 @@
 UGISInventoryComponent::UGISInventoryComponent(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
-	InventorySize = 50;
 	bWantsInitializeComponent = true;
+	InventorySize = 50;
 	InitializeInventory();
 }
-
 
 void UGISInventoryComponent::InitializeComponent()
 {
 	Super::InitializeComponent();
-	InitializeInventoryTabs();
-}
-void UGISInventoryComponent::PostInitProperties()
-{
-	Super::PostInitProperties();
-	
-}
-
-void UGISInventoryComponent::PickItem(AActor* PickupItemIn)
-{
-	if (GetOwnerRole() < ROLE_Authority)
+	if (InventoryContainerClass)
 	{
-		ServerPickItem(PickupItemIn);
-	}
-	else
-	{
-		IIGISPickupItem* pickupItem = Cast<IIGISPickupItem>(PickupItemIn);
-		if (pickupItem)
+		InventoryContainer = ConstructObject<UGISContainerBase>(InventoryContainerClass, this);
+		if (InventoryContainer)
 		{
-			//do something, I'm not sure what yet.
+			ULocalPlayer* Player = World->GetFirstLocalPlayerFromController(); //temporary
+			InventoryContainer->SetPlayerContext(FLocalPlayerContext(Player)); //temporary
+			InventoryContainer->Initialize();
+			InventoryContainer->InventoryComponent = this;
 		}
 	}
 }
 
-void UGISInventoryComponent::ServerPickItem_Implementation(AActor* PickupItemIn)
-{
-	PickItem(PickupItemIn);
-}
-bool UGISInventoryComponent::ServerPickItem_Validate(AActor* PickupItemIn)
-{
-	return true;
-}
 void UGISInventoryComponent::AddItemToInventory(class UGISItemData* ItemIn)
 {
 	if (GetOwnerRole() < ROLE_Authority)
@@ -64,12 +43,12 @@ void UGISInventoryComponent::AddItemToInventory(class UGISItemData* ItemIn)
 	}
 	else
 	{
-		for (FGISItemDataWrapper& Item : ItemsInInventory)
+		for (FGISInventorySlot& Item : ItemsInInventory)
 		{
-			if (Item.Item == nullptr)
+			if (Item.ItemData == nullptr)
 			{
-				Item.Item = ItemIn;
-				ClientUpdateInventory(Item.CurrentItemIndex, Item.Item);
+				Item.ItemData = ItemIn;
+				ClientUpdateInventory(Item.SlotIndex, Item.ItemData);
 				return;
 			}
 		}
@@ -87,60 +66,156 @@ bool UGISInventoryComponent::ServerAddItemToInventory_Validate(class UGISItemDat
 }
 
 
-void UGISInventoryComponent::AddItemOnSlot(int32 TargetSlot, int32 LastSlot)
+void UGISInventoryComponent::AddItemOnSlot(int32 TargetSlotIndex, const FGISSlotInfo& TargetSlotType, int32 LastSlotIndex, const FGISSlotInfo& LastSlotType)
 {
 	if (GetOwnerRole() < ROLE_Authority)
 	{
-		ServerAddItemOnSlot(TargetSlot, LastSlot);
+		ServerAddItemOnSlot(TargetSlotIndex, TargetSlotType, LastSlotIndex, LastSlotType);
 	}
 	else
 	{
-		if (ItemsInInventory[TargetSlot].Item == nullptr)
-		{
-			UGISItemData* TargetItem = ItemsInInventory[LastSlot].Item;
-			UGISItemData* LastItem = ItemsInInventory[TargetSlot].Item;
+		//frankly this looks ugly shit.
+		/*
+		This is how it works.
+		Each widget slot have assigned struct, which describe it's type.
 
-			ItemsInInventory[TargetSlot].Item = TargetItem;
-			ItemsInInventory[LastSlot].Item = nullptr;
-			ClientSlotSwap(LastSlot, LastItem, TargetSlot, TargetItem);
+		This struct doesn't do anything in particular beyond holdind it's type in int32
+		pointer to data store object, and index in array.
+		But it can be easily extended to add your own functionality.
+
+		When you drag item from inventory, last slot type is derived from last widget slot,
+		and it's passed to this function.
+		Here we check slot type, and determine interaction between slots (how TargetSlot
+		will interact with last slot).
+
+		It's more or less generic way to code interaction between various elements of UI.
+		You can have your normal inventory which store items.
+		You can have another inventory which store abilities.
+		And at very least you can have inventory, which is essentialy hotbar.
+		For example you might not want to let use drag items from inventory to hotbar and to
+		ability inventory ;).
+		Ot you mihgt want to allow user to drag items from item and ability inventory to hotbar,
+		but not between them.
+		*/
+
+		if (ItemsInInventory[TargetSlotIndex].ItemData == nullptr)
+		{
+			UGISItemData* TargetItem = ItemsInInventory[LastSlotIndex].ItemData;
+			UGISItemData* LastItem = ItemsInInventory[TargetSlotIndex].ItemData;
+
+			ItemsInInventory[TargetSlotIndex].ItemData = TargetItem;
+			ItemsInInventory[LastSlotIndex].ItemData = nullptr;
+
+			FGISSlotSwapInfo SlotSwapInfo;
+
+			SlotSwapInfo.LastSlotIndex = LastSlotIndex;
+			SlotSwapInfo.LastSlotData = LastItem;
+			SlotSwapInfo.LastSlotComponent = LastSlotType.CurrentInventoryComponent;
+			SlotSwapInfo.TargetSlotIndex = TargetSlotIndex;
+			SlotSwapInfo.TargetSlotData = TargetItem;
+			SlotSwapInfo.TargetSlotComponent = TargetSlotType.CurrentInventoryComponent;
+			ClientSlotSwap(SlotSwapInfo);
 		}
 		else
 		{
-			UGISItemData* TargetItem = ItemsInInventory[LastSlot].Item;
-			UGISItemData* LastItem = ItemsInInventory[TargetSlot].Item;
+			UGISItemData* TargetItem = ItemsInInventory[LastSlotIndex].ItemData;
+			UGISItemData* LastItem = ItemsInInventory[TargetSlotIndex].ItemData;
 
-			ItemsInInventory[TargetSlot].Item = TargetItem;
-			ItemsInInventory[LastSlot].Item = LastItem;
-			ClientSlotSwap(LastSlot, LastItem, TargetSlot, TargetItem);
+			ItemsInInventory[TargetSlotIndex].ItemData = TargetItem;
+			ItemsInInventory[LastSlotIndex].ItemData = LastItem;
+
+			FGISSlotSwapInfo SlotSwapInfo;
+			SlotSwapInfo.LastSlotIndex = LastSlotIndex;
+			SlotSwapInfo.LastSlotData = LastItem;
+			SlotSwapInfo.LastSlotComponent = LastSlotType.CurrentInventoryComponent;
+			SlotSwapInfo.TargetSlotIndex = TargetSlotIndex;
+			SlotSwapInfo.TargetSlotData = TargetItem;
+			SlotSwapInfo.TargetSlotComponent = TargetSlotType.CurrentInventoryComponent;
+			ClientSlotSwap(SlotSwapInfo);
 		}
+		//if (TargetSlotType.IsOfType(FGISInventorySlot::SlotTypeID))
+		//{
+		//	FGISInventorySlot* const TargetSlot = (FGISInventorySlot*)&TargetSlotType;
+
+		//	if (LastSlotType.IsOfType(FGISInventorySlot::SlotTypeID))
+		//	{
+		//		FGISInventorySlot* const LastSlot = (FGISInventorySlot*)&LastSlotType;
+		//		if (ItemsInInventory[TargetSlotIndex].ItemData == nullptr)
+		//		{
+		//			UGISItemData* TargetItem = ItemsInInventory[LastSlotIndex].ItemData;
+		//			UGISItemData* LastItem = ItemsInInventory[TargetSlotIndex].ItemData;
+
+		//			ItemsInInventory[TargetSlotIndex].ItemData = TargetItem;
+		//			ItemsInInventory[LastSlotIndex].ItemData = nullptr;
+		//			ClientSlotSwap(LastSlotIndex, LastItem, TargetSlotIndex, TargetItem);
+		//		}
+		//		else
+		//		{
+		//			UGISItemData* TargetItem = ItemsInInventory[LastSlotIndex].ItemData;
+		//			UGISItemData* LastItem = ItemsInInventory[TargetSlotIndex].ItemData;
+
+		//			ItemsInInventory[TargetSlotIndex].ItemData = TargetItem;
+		//			ItemsInInventory[LastSlotIndex].ItemData = LastItem;
+		//			ClientSlotSwap(LastSlotIndex, LastItem, TargetSlotIndex, TargetItem);
+		//		}
+		//	}
+		//	else if (LastSlotType.IsOfType(FGISItemHotbar::SlotTypeID))
+		//	{
+		//		FGISItemHotbar* const LasttSlot = (FGISItemHotbar*)&LastSlotType;
+		//	}
+		//}
+		//if (TargetSlotType.IsOfType(FGISItemHotbar::SlotTypeID))
+		//{
+		//	FGISItemHotbar* const TargetSlot = (FGISItemHotbar*)&TargetSlotType;
+
+		//	if (LastSlotType.IsOfType(FGISInventorySlot::SlotTypeID))
+		//	{
+		//		FGISInventorySlot* const LastSlot = (FGISInventorySlot*)&LastSlotType;
+		//	}
+		//	else if (LastSlotType.IsOfType(FGISItemHotbar::SlotTypeID))
+		//	{
+		//		FGISItemHotbar* const LasttSlot = (FGISItemHotbar*)&LastSlotType;
+		//	}
+		//}
+		//if (ItemsInInventory[TargetSlot].Item == nullptr)
+		//{
+		//	UGISItemData* TargetItem = ItemsInInventory[LastSlot].Item;
+		//	UGISItemData* LastItem = ItemsInInventory[TargetSlot].Item;
+
+		//	ItemsInInventory[TargetSlot].Item = TargetItem;
+		//	ItemsInInventory[LastSlot].Item = nullptr;
+		//	ClientSlotSwap(LastSlot, LastItem, TargetSlot, TargetItem);
+		//}
+		//else
+		//{
+		//	UGISItemData* TargetItem = ItemsInInventory[LastSlot].Item;
+		//	UGISItemData* LastItem = ItemsInInventory[TargetSlot].Item;
+
+		//	ItemsInInventory[TargetSlot].Item = TargetItem;
+		//	ItemsInInventory[LastSlot].Item = LastItem;
+		//	ClientSlotSwap(LastSlot, LastItem, TargetSlot, TargetItem);
+		//}
 	}
 }
 
-void UGISInventoryComponent::ServerAddItemOnSlot_Implementation(int32 TargetSlot, int32 LastSlot)
+void UGISInventoryComponent::ServerAddItemOnSlot_Implementation(int32 TargetSlot, const FGISSlotInfo& TargetSlotType, int32 LastSlot, const FGISSlotInfo& LastSlotType)
 {
-	AddItemOnSlot(TargetSlot, LastSlot);
+	AddItemOnSlot(TargetSlot, TargetSlotType, LastSlot, LastSlotType);
 }
-bool UGISInventoryComponent::ServerAddItemOnSlot_Validate(int32 TargetSlot, int32 LastSlot)
+bool UGISInventoryComponent::ServerAddItemOnSlot_Validate(int32 TargetSlot, const FGISSlotInfo& TargetSlotType, int32 LastSlot, const FGISSlotInfo& LastSlotType)
 {
 	return true;
 }
 
-void UGISInventoryComponent::ClientUpdateInventory_Implementation(int32 NewSlot, class UGISItemData* ItemDataOut)
-{
-	OnItemAdded.Broadcast(NewSlot, ItemDataOut);
-}
-void UGISInventoryComponent::ClientSlotSwap_Implementation(int32 LastSlotIndex, class UGISItemData* LastSlotData, int32 TargetSlot, class UGISItemData* TargetSlotData)
-{
-	OnItemSlotSwapped.Broadcast(LastSlotIndex, LastSlotData, TargetSlot, TargetSlotData);
-}
 void UGISInventoryComponent::InitializeInventory()
 {
 	for (int32 Index = 0; Index < InventorySize; Index++)
 	{
-		FGISItemDataWrapper newItem;
-		newItem.CurrentItemIndex = Index;
-		newItem.Item = nullptr;
-
+		FGISInventorySlot newItem;
+		//newItem.LastSlotIndex = INDEX_NONE;
+		newItem.SlotIndex = Index;
+		newItem.ItemData = nullptr;
+		newItem.CurrentInventoryComponent = this;
 		ItemsInInventory.Add(newItem);
 	}
 }
@@ -162,16 +237,11 @@ void UGISInventoryComponent::InitializeInventoryTabs()
 			SlotInfo.ItemData = nullptr;
 			TabInfo.TabSlots.Add(SlotInfo);
 		}
-		
+
 		Tabs.InventoryTabs.Add(TabInfo);
 		counter++;
 	}
 	PostInventoryInitialized();
-}
-
-void UGISInventoryComponent::PostInventoryInitialized()
-{
-
 }
 
 void UGISInventoryComponent::GetLifetimeReplicatedProps(TArray< class FLifetimeProperty > & OutLifetimeProps) const
@@ -186,11 +256,11 @@ bool UGISInventoryComponent::ReplicateSubobjects(class UActorChannel *Channel, c
 {
 	bool WroteSomething = Super::ReplicateSubobjects(Channel, Bunch, RepFlags);
 
-	for (const FGISItemDataWrapper& item : ItemsInInventory)
+	for (const FGISInventorySlot& item : ItemsInInventory)
 	{
-		if (item.Item)
+		if (item.ItemData)
 		{
-			WroteSomething |= Channel->ReplicateSubobject(const_cast<UGISItemData*>(item.Item), *Bunch, *RepFlags);
+			WroteSomething |= Channel->ReplicateSubobject(const_cast<UGISItemData*>(item.ItemData), *Bunch, *RepFlags);
 		}
 	}
 
@@ -204,17 +274,15 @@ bool UGISInventoryComponent::ReplicateSubobjects(class UActorChannel *Channel, c
 			}
 		}
 	}
-	
-
 	return WroteSomething;
 }
 void UGISInventoryComponent::GetSubobjectsWithStableNamesForNetworking(TArray<UObject*>& Objs)
 {
-	for (const FGISItemDataWrapper& item : ItemsInInventory)
+	for (const FGISInventorySlot& item : ItemsInInventory)
 	{
-		if (item.Item && item.Item->IsNameStableForNetworking())
+		if (item.ItemData && item.ItemData->IsNameStableForNetworking())
 		{
-			Objs.Add(const_cast<UGISItemData*>(item.Item));
+			Objs.Add(const_cast<UGISItemData*>(item.ItemData));
 		}
 	}
 	for (const FGISTabInfo& TabInfo : Tabs.InventoryTabs)

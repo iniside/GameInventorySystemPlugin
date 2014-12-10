@@ -8,14 +8,16 @@ namespace UnrealBuildTool.Rules
 		{
 			PublicIncludePaths.AddRange(
 				new string[] {
+                    "GameInventorySystem",
                     "GameInventorySystem/Public",
+                    "GameInventorySystem/Widgets"
 					// ... add public include paths required here ...
 				}
 				);
 
 			PrivateIncludePaths.AddRange(
 				new string[] {
-					"GameInventorySystem/Private",
+					"GameInventorySystem/Private"
 					// ... add other private include paths required here ...
 				}
 				);
@@ -25,7 +27,11 @@ namespace UnrealBuildTool.Rules
 				{
 				    "Core",
 				    "CoreUObject",
-				    "Engine"
+				    "Engine",
+                    "InputCore",
+                    "UMG",
+                    "Slate",
+                    "SlateCore"
 					// ... add other public dependencies that you statically link with here ...
 				}
 				);

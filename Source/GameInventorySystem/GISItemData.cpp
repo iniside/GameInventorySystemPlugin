@@ -12,3 +12,13 @@ bool UGISItemData::IsNameStableForNetworking() const
 {
 	return bNetAddressable;
 }
+
+bool UGISItemData::OnKeyPressedDown_Implementation()
+{
+	return false;
+}
+
+bool UGISItemData::OnKeyPressedUp_Implementation()
+{
+	return false;
+}
