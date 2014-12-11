@@ -11,12 +11,50 @@ class GAMEINVENTORYSYSTEM_API UGISInventoryBaseComponent : public UActorComponen
 {
 	GENERATED_UCLASS_BODY()
 public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ExposeOnSpawn))
+		int32 InventorySize;
 
-	UPROPERTY(EditAnywhere)
-		TSubclassOf<class UGISContainerBase> InventoryContainerClass;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		TArray <FGISSlotsInTab> InitialTabInfo;
+
+	/*
+	Indicates if items can be activated directly in invetory window.
+	Useful if you want to prevent player from activating items in invetory. For example
+	healing potions, or something.
+	*/
+	UPROPERTY(EditAnywhere, Category = "Inventory Options")
+		bool bCanActivateItemInInventory;
+	/*
+	I probabaly need to wrap it into struct, to better support drag&drop, sorting, item swapping
+	etc.
+	Because right now I have no way of really knowing, which position item is, or on what
+	position it was previously, because order of Dynamic Array is not guaranteed.
+
+	Index order of this array should be stable. It's not sorted in anyway, but also items never change position inside it.
+	Only data contained within struct is changed, while struct itself remain intact.
+
+	Once this is done and working, refactor this into Tabs.
+	Inventory can have multiple Tabs(Bags ?), and each tab can have X slots.
+	*/
+	UPROPERTY(BlueprintReadWrite, Replicated, Category = "Inventory")
+		TArray<FGISSlotInfo> ItemsInInventory;
+	/*
+	Initial take on inventory tabs.
+	*/
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category = "Inventory")
+		FGISInventoryTab Tabs;
+
+	UPROPERTY(EditAnywhere, Instanced)
+		TSubclassOf<class UGISContainerBaseWidget> InventoryContainerClass;
+
+	/*
+		Types of slot used in this container.
+	*/
+	UPROPERTY(EditAnywhere, meta = (ExposeOnSpawn))
+		TSubclassOf<class UGISSlotBaseWidget> SlotClass;
 
 	UPROPERTY(BlueprintReadOnly)
-	class UGISContainerBase* InventoryContainer;
+	class UGISContainerBaseWidget* InventoryContainer;
 
 	UPROPERTY(BlueprintCallable, BlueprintAssignable)
 		FGISOnItemAdded OnItemAdded;
@@ -24,8 +62,14 @@ public:
 	UPROPERTY(BlueprintCallable, BlueprintAssignable)
 		FGISOnItemSlotSwapped OnItemSlotSwapped;
 
+
 	virtual void InitializeComponent() override;
 	virtual void PostInitProperties() override;
+
+	/*
+		To easily get current inventory array for widget initialization.
+	*/
+	virtual TArray<FGISSlotInfo> GetInventoryArray();
 	/*
 		Initial draft for picking up items from world.
 
@@ -84,11 +128,17 @@ public:
 
 	void PostInventoryInitialized();
 
+
+	virtual bool ReplicateSubobjects(class UActorChannel *Channel, class FOutBunch *Bunch, FReplicationFlags *RepFlags) override;
+	virtual void GetSubobjectsWithStableNamesForNetworking(TArray<UObject*>& Objs) override;
+
 	/*
 		Invenory UObject replication support
 
 	*/
-
+private:
+	void InitializeInventory();
+	void InitializeInventoryTabs();
 };
 
 

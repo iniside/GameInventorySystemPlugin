@@ -4,7 +4,7 @@
 
 #include "GISGlobalTypes.h"
 #include "GISItemData.h"
-#include "Widgets/GISContainerBase.h"
+#include "Widgets/GISContainerBaseWidget.h"
 
 #include "Net/UnrealNetwork.h"
 #include "Engine/ActorChannel.h"
@@ -31,13 +31,16 @@ void UGISActionBarComponent::InitializeComponent()
 	Super::InitializeComponent();
 	if (InventoryContainerClass)
 	{
-		InventoryContainer = ConstructObject<UGISContainerBase>(InventoryContainerClass, this);
+		InventoryContainer = ConstructObject<UGISContainerBaseWidget>(InventoryContainerClass, this);
 		if (InventoryContainer)
 		{
 			ULocalPlayer* Player = World->GetFirstLocalPlayerFromController();
 			InventoryContainer->SetPlayerContext(FLocalPlayerContext(Player));
 			InventoryContainer->Initialize();
 			InventoryContainer->InventoryComponent = this;
+
+			//call last
+			InventoryContainer->InitializeContainer();
 		}
 	}
 }
