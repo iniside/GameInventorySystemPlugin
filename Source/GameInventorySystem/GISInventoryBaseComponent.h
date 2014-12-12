@@ -11,11 +11,22 @@ class GAMEINVENTORYSYSTEM_API UGISInventoryBaseComponent : public UActorComponen
 {
 	GENERATED_UCLASS_BODY()
 public:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ExposeOnSpawn))
+	UPROPERTY(EditAnywhere)
 		int32 InventorySize;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		TArray <FGISSlotsInTab> InitialTabInfo;
+
+	/*
+		Which item types, this component will accept.
+
+		Useful if you have multiple inventory components on single actor, and want to make sure that they will accept
+		only specific items.
+
+		If nothing specified, nothing will be accepted, so make sure to add something!
+	*/
+	UPROPERTY(EditAnywhere)
+		TArray<TSubclassOf<class UGISItemData>> AccepectedItems;
 
 	/*
 	Indicates if items can be activated directly in invetory window.

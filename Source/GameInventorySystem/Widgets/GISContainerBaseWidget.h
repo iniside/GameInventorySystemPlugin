@@ -64,4 +64,7 @@ public:
 	
 	UFUNCTION()
 	void Widget_OnItemSlotSwapped(const FGISSlotSwapInfo& SlotSwapInfo);
+
+	void AddItem(const FGISSlotSwapInfo& SlotSwapInfo);
+	void RemoveItem(const FGISSlotSwapInfo& SlotSwapInfo);
 };
