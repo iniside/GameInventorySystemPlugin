@@ -3,14 +3,13 @@
 #include "../GISGlobalTypes.h"
 #include "GISContainerBaseWidget.generated.h"
 /*
-	This is base class for item container used in InventoryComponent, to store items.
+	Base class for inventory widget container. It will contain inventory tabs. How and what you do
+	with tabs is up to you. You might only have one tab displayed as list in full screen.
 
-	How you use this container is up to you. I assume that item container will contain only TSubclassOf<>
-	properties, which will in turn reference proper items (like weapons, construction elements, 
-	consumable, armor items etc), along with any accompaning data for them (like upgrades, stats mods,
-	count of how many items player have etc).
+	Or you can have multiple tabs displayed in discreete moveable windows. 
+	This base widgets only contain info, about available slots and tabs, but don't display anything.
 
-	If you so desire, you can of course just extend any item from this class but I do not recommend it.
+	you must create the display part by either extendting this class in C++ or in Blueprint.
 */
 UCLASS()
 class GAMEINVENTORYSYSTEM_API UGISContainerBaseWidget : public UUserWidget
@@ -18,15 +17,20 @@ class GAMEINVENTORYSYSTEM_API UGISContainerBaseWidget : public UUserWidget
 	GENERATED_UCLASS_BODY()
 public:
 	virtual void InitializeContainer();
+	/*
+		Type of tab used in this container.
+	*/
+	UPROPERTY(EditAnywhere, meta = (ExposeOnSpawn))
+		TSubclassOf<class UGISTabBaseWidget> TabClass;
 
 	/*
-		Types of slot used in this container.
+		Type of slot used in this container.
 	*/
 	UPROPERTY(EditAnywhere, meta = (ExposeOnSpawn))
 		TSubclassOf<class UGISSlotBaseWidget> SlotClass;
 
 	/*
-		Types if item widget, which can be contained in slot.
+		Type if item widget, which can be contained in slot.
 	*/
 	UPROPERTY(EditAnywhere, meta = (ExposeOnSpawn))
 		TSubclassOf<class UGISItemBaseWidget> ItemClass;
@@ -50,7 +54,13 @@ public:
 		blueprint.
 	*/
 	/**
-		List of slots, for this container;
+		List of tabs for this container. Probabaly should make it read only.
+	*/
+	UPROPERTY(BlueprintReadWrite)
+		TArray<class UGISTabBaseWidget*> InventoryTabs;
+
+	/**
+		List of slots, for this container. Probabaly should make it read only.
 	*/
 	UPROPERTY(BlueprintReadWrite)
 		TArray<class UGISSlotBaseWidget*> InventorySlots;
@@ -60,7 +70,7 @@ public:
 	//in anycase they are only for client side interaction
 
 	UFUNCTION()
-	void Widget_OnItemAdded(int32 NewSlot, class UGISItemData* ItemDataIn);
+		void Widget_OnItemAdded(const FGISSlotUpdateData& SlotUpdateInfo);
 	
 	UFUNCTION()
 	void Widget_OnItemSlotSwapped(const FGISSlotSwapInfo& SlotSwapInfo);

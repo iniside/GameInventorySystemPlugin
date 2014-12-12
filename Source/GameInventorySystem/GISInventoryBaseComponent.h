@@ -3,7 +3,11 @@
 #include "GISGlobalTypes.h"
 #include "GISInventoryBaseComponent.generated.h"
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FGISOnItemAdded, int32, NewSlot, class UGISItemData*, ItemDataOut);
+/*
+	Simple event to force client, to redraw inventory after first load data has been repliated to client.
+*/
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGISOnInventoryLoaded);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FGISOnItemAdded, const FGISSlotUpdateData&, SlotUpdateInfo);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FGISOnItemSlotSwapped, const FGISSlotSwapInfo&, SlotSwapInfo);
 
 UCLASS(hidecategories = (Object, LOD, Lighting, Transform, Sockets, TextureStreaming), editinlinenew, meta = (BlueprintSpawnableComponent))
@@ -50,7 +54,10 @@ public:
 	UPROPERTY(BlueprintReadWrite, Replicated, Category = "Inventory")
 		TArray<FGISSlotInfo> ItemsInInventory;
 	/*
-	Initial take on inventory tabs.
+		Each element in Array InventoryTabs is single tab.
+		NumberOfSlots - Number of inventory slots in this tab.
+		TabIndex - easily accessible Index of this tab.
+		TabSlots<> array of inventory Slots in this Tab.
 	*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category = "Inventory")
 		FGISInventoryTab Tabs;
@@ -120,17 +127,17 @@ public:
 
 
 	UFUNCTION(BlueprintCallable, Category = "Game Inventory System")
-		virtual void AddItemOnSlot(int32 TargetSlotIndex, const FGISSlotInfo& TargetSlotType, int32 LastSlotIndex, const FGISSlotInfo& LastSlotType);
+		virtual void AddItemOnSlot(const FGISSlotInfo& TargetSlotType, const FGISSlotInfo& LastSlotType);
 
 	UFUNCTION(Server, Reliable, WithValidation)
-		virtual void ServerAddItemOnSlot(int32 TargetSlot, const FGISSlotInfo& TargetSlotType, int32 LastSlot, const FGISSlotInfo& LastSlotType);
+		virtual void ServerAddItemOnSlot(const FGISSlotInfo& TargetSlotType, const FGISSlotInfo& LastSlotType);
 	/*
 		Heyyy client, would you be so nice, and update this slot with this item ? Thanks!
 
 		On more serious note, it will just call OnItemAdded delegate on client.
 	*/
 	UFUNCTION(Client, Reliable)
-		void ClientUpdateInventory(int32 NewSlot, class UGISItemData* ItemDataOut);
+		void ClientUpdateInventory(const FGISSlotUpdateData& SlotUpdateInfo);
 
 
 	UFUNCTION(Client, Reliable)

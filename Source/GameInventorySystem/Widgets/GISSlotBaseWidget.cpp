@@ -62,7 +62,7 @@ bool UGISSlotBaseWidget::OnDrop_Implementation(FGeometry MyGeometry, FPointerEve
 		UGISItemBaseWidget* item = Cast<UGISItemBaseWidget>(Operation->Payload);
 		if (item)
 		{
-			SlotInfo.CurrentInventoryComponent->AddItemOnSlot(0, SlotInfo, 0, item->LastSlotInfo);
+			SlotInfo.CurrentInventoryComponent->AddItemOnSlot(SlotInfo, item->LastSlotInfo);
 			return true;
 		}
 	}

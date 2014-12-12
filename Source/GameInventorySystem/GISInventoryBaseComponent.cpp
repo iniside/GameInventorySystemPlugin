@@ -26,6 +26,7 @@ void UGISInventoryBaseComponent::InitializeComponent()
 {
 	Super::InitializeComponent();
 	InitializeInventory();
+	InitializeInventoryTabs();
 	if (InventoryContainerClass)
 	{
 		InventoryContainer = ConstructObject<UGISContainerBaseWidget>(InventoryContainerClass, this);
@@ -85,14 +86,22 @@ void UGISInventoryBaseComponent::AddItemToInventory(class UGISItemData* ItemIn)
 	}
 	else
 	{
-		//add new item to first free slot.
-		for (FGISSlotInfo& slot : ItemsInInventory)
+		//add item to first empty slot in first matching tab.
+		for (FGISTabInfo& TabInfo : Tabs.InventoryTabs)
 		{
-			if (slot.ItemData == nullptr)
+			for (FGISSlotInfo& Slot : TabInfo.TabSlots)
 			{
-				slot.ItemData = ItemIn;
-				ClientUpdateInventory(slot.SlotIndex, slot.ItemData);
-				return;
+				if (Slot.ItemData == nullptr)
+				{
+					Slot.ItemData = ItemIn;
+					FGISSlotUpdateData SlotUpdateData;
+					SlotUpdateData.TabIndex = TabInfo.TabIndex;
+					SlotUpdateData.SlotIndex = Slot.SlotIndex;
+					SlotUpdateData.SlotData = Slot.ItemData;
+					SlotUpdateData.SlotComponent = this;
+					ClientUpdateInventory(SlotUpdateData);
+					return;
+				}
 			}
 		}
 	}
@@ -109,63 +118,67 @@ bool UGISInventoryBaseComponent::ServerAddItemToInventory_Validate(class UGISIte
 }
 
 
-void UGISInventoryBaseComponent::AddItemOnSlot(int32 TargetSlotIndex, const FGISSlotInfo& TargetSlotType, int32 LastSlotIndex, const FGISSlotInfo& LastSlotType)
+void UGISInventoryBaseComponent::AddItemOnSlot(const FGISSlotInfo& TargetSlotType, const FGISSlotInfo& LastSlotType)
 {
-	if (ItemsInInventory[TargetSlotType.SlotIndex].ItemData == nullptr)
+	//Tabs.InventoryTabs[TargetSlotType.SlotTabIndex].TabSlots[TargetSlotType.SlotTabIndex].ItemData
+	if (Tabs.InventoryTabs[TargetSlotType.SlotTabIndex].TabSlots[TargetSlotType.SlotIndex].ItemData == nullptr)
 	{
-		UGISItemData* TargetItem = ItemsInInventory[LastSlotType.SlotIndex].ItemData;
-		UGISItemData* LastItem = ItemsInInventory[TargetSlotType.SlotIndex].ItemData;
+		UGISItemData* TargetItem = Tabs.InventoryTabs[LastSlotType.SlotTabIndex].TabSlots[LastSlotType.SlotIndex].ItemData;
+		UGISItemData* LastItem = Tabs.InventoryTabs[TargetSlotType.SlotTabIndex].TabSlots[TargetSlotType.SlotIndex].ItemData;
 
-		ItemsInInventory[TargetSlotType.SlotIndex].ItemData = TargetItem;
-		ItemsInInventory[LastSlotType.SlotIndex].ItemData = nullptr;
+		Tabs.InventoryTabs[TargetSlotType.SlotTabIndex].TabSlots[TargetSlotType.SlotIndex].ItemData = TargetItem;
+		Tabs.InventoryTabs[LastSlotType.SlotTabIndex].TabSlots[LastSlotType.SlotIndex].ItemData = nullptr;
 
 		FGISSlotSwapInfo SlotSwapInfo;
 
 		SlotSwapInfo.LastSlotIndex = LastSlotType.SlotIndex;
+		SlotSwapInfo.LastTabIndex = LastSlotType.SlotTabIndex;
 		SlotSwapInfo.LastSlotData = LastItem;
 		SlotSwapInfo.LastSlotComponent = LastSlotType.CurrentInventoryComponent;
 		SlotSwapInfo.TargetSlotIndex = TargetSlotType.SlotIndex;
+		SlotSwapInfo.TargetTabIndex = TargetSlotType.SlotTabIndex;
 		SlotSwapInfo.TargetSlotData = TargetItem;
 		SlotSwapInfo.TargetSlotComponent = TargetSlotType.CurrentInventoryComponent;
 		ClientSlotSwap(SlotSwapInfo);
 	}
 	else
 	{
-		UGISItemData* TargetItem = ItemsInInventory[LastSlotType.SlotIndex].ItemData;
-		UGISItemData* LastItem = ItemsInInventory[TargetSlotType.SlotIndex].ItemData;
+		UGISItemData* TargetItem = Tabs.InventoryTabs[LastSlotType.SlotTabIndex].TabSlots[LastSlotType.SlotIndex].ItemData;
+		UGISItemData* LastItem = Tabs.InventoryTabs[TargetSlotType.SlotTabIndex].TabSlots[TargetSlotType.SlotIndex].ItemData;
 
-		ItemsInInventory[TargetSlotType.SlotIndex].ItemData = TargetItem;
-		ItemsInInventory[LastSlotType.SlotIndex].ItemData = LastItem;
+		Tabs.InventoryTabs[TargetSlotType.SlotTabIndex].TabSlots[TargetSlotType.SlotIndex].ItemData = TargetItem;
+		Tabs.InventoryTabs[LastSlotType.SlotTabIndex].TabSlots[LastSlotType.SlotIndex].ItemData = LastItem;
 
 		FGISSlotSwapInfo SlotSwapInfo;
 		SlotSwapInfo.LastSlotIndex = LastSlotType.SlotIndex;
+		SlotSwapInfo.LastTabIndex = LastSlotType.SlotTabIndex;
 		SlotSwapInfo.LastSlotData = LastItem;
 		SlotSwapInfo.LastSlotComponent = LastSlotType.CurrentInventoryComponent;
 		SlotSwapInfo.TargetSlotIndex = TargetSlotType.SlotIndex;
+		SlotSwapInfo.TargetTabIndex = TargetSlotType.SlotTabIndex;
 		SlotSwapInfo.TargetSlotData = TargetItem;
 		SlotSwapInfo.TargetSlotComponent = TargetSlotType.CurrentInventoryComponent;
 		ClientSlotSwap(SlotSwapInfo);
 	}
 }
 
-void UGISInventoryBaseComponent::ServerAddItemOnSlot_Implementation(int32 TargetSlot, const FGISSlotInfo& TargetSlotType, int32 LastSlot, const FGISSlotInfo& LastSlotType)
+void UGISInventoryBaseComponent::ServerAddItemOnSlot_Implementation(const FGISSlotInfo& TargetSlotType, const FGISSlotInfo& LastSlotType)
 {
-	AddItemOnSlot(TargetSlot, TargetSlotType, LastSlot, LastSlotType);
+	AddItemOnSlot(TargetSlotType, LastSlotType);
 }
-bool UGISInventoryBaseComponent::ServerAddItemOnSlot_Validate(int32 TargetSlot, const FGISSlotInfo& TargetSlotType, int32 LastSlot, const FGISSlotInfo& LastSlotType)
+bool UGISInventoryBaseComponent::ServerAddItemOnSlot_Validate(const FGISSlotInfo& TargetSlotType, const FGISSlotInfo& LastSlotType)
 {
 	return true;
 }
 
-void UGISInventoryBaseComponent::ClientUpdateInventory_Implementation(int32 NewSlot, class UGISItemData* ItemDataOut)
+void UGISInventoryBaseComponent::ClientUpdateInventory_Implementation(const FGISSlotUpdateData& SlotUpdateInfo)
 {
-	OnItemAdded.Broadcast(NewSlot, ItemDataOut);
+	OnItemAdded.Broadcast(SlotUpdateInfo);
 }
 void UGISInventoryBaseComponent::ClientSlotSwap_Implementation(const FGISSlotSwapInfo& SlotSwapInfo)
 {
 	OnItemSlotSwapped.Broadcast(SlotSwapInfo);
 }
-
 
 void UGISInventoryBaseComponent::PostInventoryInitialized()
 {
@@ -252,6 +265,8 @@ void UGISInventoryBaseComponent::InitializeInventoryTabs()
 		{
 			FGISSlotInfo SlotInfo;
 			SlotInfo.SlotIndex = Index;
+			SlotInfo.SlotTabIndex = counter;
+			SlotInfo.CurrentInventoryComponent = this;
 			SlotInfo.ItemData = nullptr;
 			TabInfo.TabSlots.Add(SlotInfo);
 		}
