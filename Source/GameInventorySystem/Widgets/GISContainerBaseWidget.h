@@ -20,26 +20,26 @@ public:
 	/*
 		Type of tab used in this container.
 	*/
-	UPROPERTY(EditAnywhere, meta = (ExposeOnSpawn))
+	UPROPERTY(EditAnywhere, meta = (ExposeOnSpawn), Category = "Inventory")
 		TSubclassOf<class UGISTabBaseWidget> TabClass;
 
 	/*
 		Type of slot used in this container.
 	*/
-	UPROPERTY(EditAnywhere, meta = (ExposeOnSpawn))
+	UPROPERTY(EditAnywhere, meta = (ExposeOnSpawn), Category = "Inventory")
 		TSubclassOf<class UGISSlotBaseWidget> SlotClass;
 
 	/*
 		Type if item widget, which can be contained in slot.
 	*/
-	UPROPERTY(EditAnywhere, meta = (ExposeOnSpawn))
+	UPROPERTY(EditAnywhere, meta = (ExposeOnSpawn), Category = "Inventory")
 		TSubclassOf<class UGISItemBaseWidget> ItemClass;
 
 	/*
 		Name of drop slot, which will contain ItemWidget.
 
 	*/
-	UPROPERTY(EditAnywhere, meta = (ExposeOnSpawn))
+	UPROPERTY(EditAnywhere, meta = (ExposeOnSpawn), Category = "Inventory")
 		FName DropSlottName;
 
 	/**
@@ -58,12 +58,6 @@ public:
 	*/
 	UPROPERTY(BlueprintReadWrite)
 		TArray<class UGISTabBaseWidget*> InventoryTabs;
-
-	/**
-		List of slots, for this container. Probabaly should make it read only.
-	*/
-	UPROPERTY(BlueprintReadWrite)
-		TArray<class UGISSlotBaseWidget*> InventorySlots;
 
 	//could make it virtual, but don't want to expose it to blueprint
 	//ideally blueprint user shouldn't know that this even exist.

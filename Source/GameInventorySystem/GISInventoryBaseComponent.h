@@ -15,9 +15,6 @@ class GAMEINVENTORYSYSTEM_API UGISInventoryBaseComponent : public UActorComponen
 {
 	GENERATED_UCLASS_BODY()
 public:
-	UPROPERTY(EditAnywhere)
-		int32 InventorySize;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		TArray <FGISSlotsInTab> InitialTabInfo;
 
@@ -39,37 +36,22 @@ public:
 	*/
 	UPROPERTY(EditAnywhere, Category = "Inventory Options")
 		bool bCanActivateItemInInventory;
+
 	/*
-	I probabaly need to wrap it into struct, to better support drag&drop, sorting, item swapping
-	etc.
-	Because right now I have no way of really knowing, which position item is, or on what
-	position it was previously, because order of Dynamic Array is not guaranteed.
-
-	Index order of this array should be stable. It's not sorted in anyway, but also items never change position inside it.
-	Only data contained within struct is changed, while struct itself remain intact.
-
-	Once this is done and working, refactor this into Tabs.
-	Inventory can have multiple Tabs(Bags ?), and each tab can have X slots.
+		RepRetry - inventory is in general to important it must be replicated!
+		And besides that it's not replicated very often.
 	*/
-	UPROPERTY(BlueprintReadWrite, Replicated, Category = "Inventory")
-		TArray<FGISSlotInfo> ItemsInInventory;
 	/*
 		Each element in Array InventoryTabs is single tab.
 		NumberOfSlots - Number of inventory slots in this tab.
 		TabIndex - easily accessible Index of this tab.
 		TabSlots<> array of inventory Slots in this Tab.
 	*/
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category = "Inventory")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, RepRetry, Category = "Inventory")
 		FGISInventoryTab Tabs;
 
 	UPROPERTY(EditAnywhere, Instanced)
 		TSubclassOf<class UGISContainerBaseWidget> InventoryContainerClass;
-
-	/*
-		Types of slot used in this container.
-	*/
-	UPROPERTY(EditAnywhere, meta = (ExposeOnSpawn))
-		TSubclassOf<class UGISSlotBaseWidget> SlotClass;
 
 	UPROPERTY(BlueprintReadOnly)
 	class UGISContainerBaseWidget* InventoryContainer;
@@ -155,7 +137,6 @@ public:
 
 	*/
 private:
-	void InitializeInventory();
 	void InitializeInventoryTabs();
 };
 

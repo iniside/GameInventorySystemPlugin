@@ -25,7 +25,6 @@ UGISInventoryBaseComponent::UGISInventoryBaseComponent(const FObjectInitializer&
 void UGISInventoryBaseComponent::InitializeComponent()
 {
 	Super::InitializeComponent();
-	InitializeInventory();
 	InitializeInventoryTabs();
 	if (InventoryContainerClass)
 	{
@@ -50,8 +49,8 @@ void UGISInventoryBaseComponent::PostInitProperties()
 
 TArray<FGISSlotInfo> UGISInventoryBaseComponent::GetInventoryArray()
 {
-	//TArray<FGISSlotInfo> emptyArray;
-	return ItemsInInventory;
+	TArray<FGISSlotInfo> emptyArray;
+	return emptyArray;
 }
 
 void UGISInventoryBaseComponent::PickItem(AActor* PickupItemIn)
@@ -189,21 +188,12 @@ void UGISInventoryBaseComponent::GetLifetimeReplicatedProps(TArray< class FLifet
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME_CONDITION(UGISInventoryBaseComponent, ItemsInInventory, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(UGISInventoryBaseComponent, Tabs, COND_OwnerOnly);
 }
 
 bool UGISInventoryBaseComponent::ReplicateSubobjects(class UActorChannel *Channel, class FOutBunch *Bunch, FReplicationFlags *RepFlags)
 {
 	bool WroteSomething = Super::ReplicateSubobjects(Channel, Bunch, RepFlags);
-
-	for (const FGISSlotInfo& item : ItemsInInventory)
-	{
-		if (item.ItemData)
-		{
-			WroteSomething |= Channel->ReplicateSubobject(const_cast<UGISItemData*>(item.ItemData), *Bunch, *RepFlags);
-		}
-	}
 
 	for (const FGISTabInfo& TabInfo : Tabs.InventoryTabs)
 	{
@@ -219,13 +209,6 @@ bool UGISInventoryBaseComponent::ReplicateSubobjects(class UActorChannel *Channe
 }
 void UGISInventoryBaseComponent::GetSubobjectsWithStableNamesForNetworking(TArray<UObject*>& Objs)
 {
-	for (const FGISSlotInfo& item : ItemsInInventory)
-	{
-		if (item.ItemData && item.ItemData->IsNameStableForNetworking())
-		{
-			Objs.Add(const_cast<UGISItemData*>(item.ItemData));
-		}
-	}
 	for (const FGISTabInfo& TabInfo : Tabs.InventoryTabs)
 	{
 		for (const FGISSlotInfo& SlotItem : TabInfo.TabSlots)
@@ -235,19 +218,6 @@ void UGISInventoryBaseComponent::GetSubobjectsWithStableNamesForNetworking(TArra
 				Objs.Add(const_cast<UGISItemData*>(SlotItem.ItemData));
 			}
 		}
-	}
-}
-
-void UGISInventoryBaseComponent::InitializeInventory()
-{
-	for (int32 Index = 0; Index < InventorySize; Index++)
-	{
-		FGISSlotInfo newItem;
-		//newItem.LastSlotIndex = INDEX_NONE;
-		newItem.SlotIndex = Index;
-		newItem.ItemData = nullptr;
-		newItem.CurrentInventoryComponent = this;
-		ItemsInInventory.Add(newItem);
 	}
 }
 
