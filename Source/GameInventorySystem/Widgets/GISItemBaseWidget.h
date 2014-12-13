@@ -24,4 +24,22 @@ public:
 	*/
 	UPROPERTY(BlueprintReadOnly)
 		FGISSlotInfo TargetSlotInfo;
+
+	UPROPERTY()
+		class UGISItemData* ItemData;
+
+	/*
+		Probabaly can change them to pure.	
+	*/
+	/**
+		Get item name to display
+	*/
+	UFUNCTION(BlueprintCallable, Category = "Item Information")
+		FText GetItemName() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Item Information")
+		UTexture2D* GetIcon() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Item Information")
+		FText GetDescription() const;
 };

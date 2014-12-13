@@ -31,7 +31,8 @@ namespace UnrealBuildTool.Rules
                     "InputCore",
                     "UMG",
                     "Slate",
-                    "SlateCore"
+                    "SlateCore",
+                    "GameplayTags"
 					// ... add other public dependencies that you statically link with here ...
 				}
 				);

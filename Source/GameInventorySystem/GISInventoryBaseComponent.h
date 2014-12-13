@@ -1,6 +1,7 @@
 // Copyright 1998-2014 Epic Games, Inc. All Rights Reserved.
 #pragma once
 #include "GISGlobalTypes.h"
+#include "GameplayTags.h"
 #include "GISInventoryBaseComponent.generated.h"
 
 /*
@@ -9,6 +10,14 @@
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGISOnInventoryLoaded);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FGISOnItemAdded, const FGISSlotUpdateData&, SlotUpdateInfo);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FGISOnItemSlotSwapped, const FGISSlotSwapInfo&, SlotSwapInfo);
+
+/**
+	Note to self. I could probabaly use GameplayTags, to determine exactly how interaction between
+	various items, and components should interact.
+
+	Though of course setting up gameplay tags is bit of hassle, they should be able to give
+	very fine controll over interactions.
+*/
 
 UCLASS(hidecategories = (Object, LOD, Lighting, Transform, Sockets, TextureStreaming), editinlinenew, meta = (BlueprintSpawnableComponent))
 class GAMEINVENTORYSYSTEM_API UGISInventoryBaseComponent : public UActorComponent
@@ -50,11 +59,38 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, RepRetry, Category = "Inventory")
 		FGISInventoryTab Tabs;
 
+	/*
+
+	*/
+	/**
+	The idea behind tags, while might seem to be complicated at first, is actually very, very
+	easy.
+
+	When item is dropped into slot, component will check OwnedTags from component which item
+	has been dragged against RequredTags of component to which item is droped.
+
+	If OwnedTags does NOT contain any tags, which is in RequiredTags, drop operation cannot be
+	compoleted, so make sure to setup your tags properly.
+
+		Tags, which this componenet have,
+	*/
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory")
+		FGameplayTagContainer OwnedTags;
+
+	/**
+		Items from another component, must have these tags to be added to this component.
+	*/
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory")
+		FGameplayTagContainer RequiredTags;
+
 	UPROPERTY(EditAnywhere, Instanced)
 		TSubclassOf<class UGISContainerBaseWidget> InventoryContainerClass;
 
 	UPROPERTY(BlueprintReadOnly)
 	class UGISContainerBaseWidget* InventoryContainer;
+
+	UPROPERTY(BlueprintCallable, BlueprintAssignable)
+		FGISOnInventoryLoaded OnInventoryLoaded;
 
 	UPROPERTY(BlueprintCallable, BlueprintAssignable)
 		FGISOnItemAdded OnItemAdded;
@@ -69,7 +105,7 @@ public:
 	/*
 		To easily get current inventory array for widget initialization.
 	*/
-	virtual TArray<FGISSlotInfo> GetInventoryArray();
+	virtual FGISInventoryTab GetInventoryTabs();
 	/*
 		Initial draft for picking up items from world.
 
@@ -113,6 +149,12 @@ public:
 
 	UFUNCTION(Server, Reliable, WithValidation)
 		virtual void ServerAddItemOnSlot(const FGISSlotInfo& TargetSlotType, const FGISSlotInfo& LastSlotType);
+	
+	/*
+		Remove item from slot.
+	*/
+	UFUNCTION(BlueprintCallable, Category = "Game Inventory System")
+		virtual void RemoveItem(const FGISSlotInfo& TargetSlotType);
 	/*
 		Heyyy client, would you be so nice, and update this slot with this item ? Thanks!
 

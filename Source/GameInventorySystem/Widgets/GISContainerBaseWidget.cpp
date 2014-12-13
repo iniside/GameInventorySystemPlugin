@@ -21,7 +21,6 @@ void UGISContainerBaseWidget::InitializeContainer()
 {
 	if (InventoryComponent)
 	{
-		TArray<FGISSlotInfo> ItemInfos = InventoryComponent->GetInventoryArray();
 		int32 IndexCounter = 0;
 
 		for (const FGISTabInfo& Tab : InventoryComponent->Tabs.InventoryTabs)
@@ -125,6 +124,7 @@ void UGISContainerBaseWidget::AddItem(const FGISSlotSwapInfo& SlotSwapInfo)
 			ULocalPlayer* Player = InventoryComponent->GetWorld()->GetFirstLocalPlayerFromController(); //temporary
 			ItemWidget->SetPlayerContext(FLocalPlayerContext(Player)); //temporary
 			ItemWidget->Initialize();
+			ItemWidget->ItemData = SlotSwapInfo.TargetSlotData;
 			//ItemWidget->LastSlotInfo = SlotInfo;
 		}
 		UWidget* superWidget = InventoryTabs[SlotSwapInfo.TargetTabIndex]->InventorySlots[SlotSwapInfo.TargetSlotIndex]->GetWidgetFromName(DropSlottName);
@@ -138,12 +138,23 @@ void UGISContainerBaseWidget::AddItem(const FGISSlotSwapInfo& SlotSwapInfo)
 	else
 	{
 		//construct target and last, since this is for test one will do just as well.
-		UGISItemBaseWidget* ItemWidget = ConstructObject<UGISItemBaseWidget>(ItemClass, this);
-		if (ItemWidget && InventoryComponent)
+		UGISItemBaseWidget* TargetItemWidget = ConstructObject<UGISItemBaseWidget>(ItemClass, this);
+		if (TargetItemWidget && InventoryComponent)
 		{
 			ULocalPlayer* Player = InventoryComponent->GetWorld()->GetFirstLocalPlayerFromController(); //temporary
-			ItemWidget->SetPlayerContext(FLocalPlayerContext(Player)); //temporary
-			ItemWidget->Initialize();
+			TargetItemWidget->SetPlayerContext(FLocalPlayerContext(Player)); //temporary
+			TargetItemWidget->Initialize();
+			TargetItemWidget->ItemData = SlotSwapInfo.TargetSlotData;
+			//ItemWidget->LastSlotInfo = SlotInfo;
+		}
+
+		UGISItemBaseWidget* LastItemWidget = ConstructObject<UGISItemBaseWidget>(ItemClass, this);
+		if (TargetItemWidget && InventoryComponent)
+		{
+			ULocalPlayer* Player = InventoryComponent->GetWorld()->GetFirstLocalPlayerFromController(); //temporary
+			LastItemWidget->SetPlayerContext(FLocalPlayerContext(Player)); //temporary
+			LastItemWidget->Initialize();
+			LastItemWidget->ItemData = SlotSwapInfo.LastSlotData;
 			//ItemWidget->LastSlotInfo = SlotInfo;
 		}
 		UWidget* lastSlotWidget = InventoryTabs[SlotSwapInfo.LastTabIndex]->InventorySlots[SlotSwapInfo.LastSlotIndex]->GetWidgetFromName(DropSlottName);
@@ -152,13 +163,13 @@ void UGISContainerBaseWidget::AddItem(const FGISSlotSwapInfo& SlotSwapInfo)
 		UOverlay* lastSlotOverlay = Cast<UOverlay>(lastSlotWidget);
 		if (lastSlotOverlay)
 		{
-			lastSlotOverlay->AddChild(ItemWidget);
+			lastSlotOverlay->AddChild(LastItemWidget);
 		}
 
 		UOverlay* targetSlotOverlay = Cast<UOverlay>(targetSlotWidget);
 		if (targetSlotOverlay)
 		{
-			targetSlotOverlay->AddChild(ItemWidget);
+			targetSlotOverlay->AddChild(TargetItemWidget);
 		}
 	}
 }
