@@ -17,11 +17,11 @@ class GAMEINVENTORYSYSTEM_API AGISPickupActor : public AActor
 	GENERATED_UCLASS_BODY()
 public:
 	//Instanced
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced)
+	UPROPERTY(EditAnywhere, Replicated, BlueprintReadWrite, Instanced)
 		TArray<class UGISItemData*> ItemToLoot;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, replicated, Instanced)
-		TArray<TSubclassOf<class UGISItemData> > ItemToLootClass;
+//	UPROPERTY(EditAnywhere, BlueprintReadWrite, replicated, Instanced)
+//		TArray<TSubclassOf<class UGISItemData> > ItemToLootClass;
 
 
 	virtual void BeginPlay() override;

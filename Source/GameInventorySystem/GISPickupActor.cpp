@@ -28,25 +28,6 @@ void AGISPickupActor::BeginPlay()
 }
 void AGISPickupActor::OpenLootWindow()
 {
-	//if (LootWidget)
-	//{
-	//	ULocalPlayer* Player = GetWorld()->GetFirstLocalPlayerFromController(); //temporary
-	//	LootWidget->SetPlayerContext(FLocalPlayerContext(Player)); //temporary
-	//	LootWidget->Initialize();
-	//	int32 ItemCount = ItemToLoot.Num();
-	//	TArray<FGISLootSlotInfo> LootSlotInfos;
-	//	for (int32 Index = 0; Index < ItemCount; Index++)
-	//	{
-	//		FGISLootSlotInfo LootInfo;
-	//		LootInfo.SlotIndex = Index;
-	//		LootInfo.SlotData = ItemToLoot[Index];
-	//		LootSlotInfos.Add(LootInfo);
-	//	}
-	//	LootWidget->ItemsInfos = LootSlotInfos;
-	//	LootWidget->OwningPickupActor = this;
-	//	LootWidget->InitializeLootWidget();
-	//	LootWidget->AddToViewport();
-	//}
 
 }
 void AGISPickupActor::CloseLootWindow()

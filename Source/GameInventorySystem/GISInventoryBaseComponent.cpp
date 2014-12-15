@@ -283,6 +283,7 @@ void UGISInventoryBaseComponent::GetLootContainer(class AGISPickupActor* LootCon
 	//}
 	//else
 //	{
+	LootContainer->SetOwner(GetOwner());
 		CurrentPickupActor = LootContainer;
 		ConstructLootPickingWidget();
 //	}
@@ -347,7 +348,7 @@ void UGISInventoryBaseComponent::LootOneItem(int32 ItemIndex, class AGISPickupAc
 			//have proper indexes in first place.
 			LootContainer->ItemToLoot.RemoveAt(ItemIndex, 1, true);
 			//reconstruct widget.
-			OnItemLooted.Broadcast();
+			ClientReconstructLootWidget();
 		}
 	}
 }
@@ -368,6 +369,11 @@ void UGISInventoryBaseComponent::ServerGetLootContainer_Implementation(class AGI
 bool UGISInventoryBaseComponent::ServerGetLootContainer_Validate(class AGISPickupActor* LootContainer)
 {
 	return true;
+}
+
+void UGISInventoryBaseComponent::ClientReconstructLootWidget()
+{
+	OnItemLooted.Broadcast();
 }
 
 void UGISInventoryBaseComponent::ClientUpdateInventory_Implementation(const FGISSlotUpdateData& SlotUpdateInfoIn)
