@@ -11,6 +11,7 @@ class GAMEINVENTORYSYSTEM_API UGISLootSlotBaseWidget : public UUserWidget
 {
 	GENERATED_UCLASS_BODY()
 public:
+	~UGISLootSlotBaseWidget();
 	UPROPERTY()
 		FGISLootSlotInfo LootSlotInfo;
 

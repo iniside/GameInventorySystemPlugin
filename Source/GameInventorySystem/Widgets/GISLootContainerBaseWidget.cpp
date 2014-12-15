@@ -17,6 +17,7 @@ UGISLootContainerBaseWidget::UGISLootContainerBaseWidget(const FObjectInitialize
 
 void UGISLootContainerBaseWidget::InitializeLootWidget()
 {
+	Slots.Empty();
 	if (SlotClass)
 	{
 		for (const FGISLootSlotInfo& Item : ItemsInfos)
@@ -35,5 +36,6 @@ void UGISLootContainerBaseWidget::InitializeLootWidget()
 
 			Slots.Add(ItemSlot);
 		}
+		PostLootWidgetInitialized();
 	}
 }

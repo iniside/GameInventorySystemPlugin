@@ -33,8 +33,8 @@ public:
 		Set pointer to inventory component, which will interact with this
 		loot container. This should allow to loot it properly.
 	*/
-	//UPROPERTY(BlueprintReadOnly)
-	//	TWeakObjectPtr<class UGISInventoryBaseComponent> InteractingInventory;
+	UPROPERTY(BlueprintReadOnly)
+		TWeakObjectPtr<class UGISInventoryBaseComponent> InteractingInventory;
 
 
 	void OpenLootWindow();

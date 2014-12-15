@@ -16,13 +16,13 @@ class GAMEINVENTORYSYSTEM_API UGISItemData : public UObject
 {
 	GENERATED_UCLASS_BODY()
 public:
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Item Properties")
 		bool bCanBeAddedToHotbar;
 
 	/**
 		Can item stack ? For example, can more than one item occupy single inventory slot ?
 	*/
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Item Properties")
 		bool bCanStack;
 
 	/*
@@ -30,12 +30,17 @@ public:
 		I use in32, because it doesn't have any problems with blueprint interaction.
 	*/
 	/*
-		How much items is currently stacked here ?
+		How much items is currently stacked here ? Set number to tell how many items there is initlally.
 	*/
-	UPROPERTY(BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Properties")
 		int32 StackCounter;
-
-
+	/*
+		Class of actor, which will be spawned when item is placed on level.
+		Deliberetly subclass of AGISPickupActor, as we want to be able to pick item back
+		to inventory.
+	*/
+	UPROPERTY(EditAnywhere, Category = "Item Properties")
+		TSubclassOf<class AGISPickupActor> ItemLootActorClass;
 	/*
 		There are item behind specific items. It's another layer of checking to make setup even 
 		more flexible. Since you might want certain components to acceept items from two different
@@ -104,6 +109,12 @@ public:
 		Override when you need to activate item. For example from hotbar. Or something.
 	*/
 	virtual void ActivateItem() {}
+
+	/*
+		Override to perform action, when item is droped out of inventory.
+		Most likely you will want to spawn actor on level, which will represent dropped item.
+	*/
+	virtual void OnDropFromInventory() {};
 
 	/*
 		Don't like this crap, but it is best way to expose it to blueprint (;.

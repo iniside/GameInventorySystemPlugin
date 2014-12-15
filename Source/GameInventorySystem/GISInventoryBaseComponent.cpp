@@ -55,6 +55,21 @@ void UGISInventoryBaseComponent::InitializeComponent()
 					InventoryContainer->InitializeContainer();
 				}
 			}
+
+			UObject* Outer = GetWorld()->GetGameInstance() ? StaticCast<UObject*>(GetWorld()->GetGameInstance()) : StaticCast<UObject*>(GetWorld());
+			if (LootWidgetClass)
+			{
+				LootWidget = ConstructObject<UGISLootContainerBaseWidget>(LootWidgetClass, Outer);
+				if (LootWidget)
+				{
+					ULocalPlayer* Player = GetWorld()->GetFirstLocalPlayerFromController(); //temporary
+					LootWidget->SetPlayerContext(FLocalPlayerContext(Player)); //temporary
+					LootWidget->Initialize();
+					LootWidget->SetVisibility(ESlateVisibility::Hidden);
+				}
+			}
+
+			OnItemLooted.AddDynamic(this, &UGISInventoryBaseComponent::ConstructLootPickingWidget);
 		}
 
 		if (CurrentRole == ROLE_Authority || CurrentNetMode == ENetMode::NM_Standalone)
@@ -268,34 +283,36 @@ void UGISInventoryBaseComponent::GetLootContainer(class AGISPickupActor* LootCon
 	//}
 	//else
 //	{
-		if (LootContainer)
-		{
-			UObject* Outer = GetWorld()->GetGameInstance() ? StaticCast<UObject*>(GetWorld()->GetGameInstance()) : StaticCast<UObject*>(GetWorld());
-			LootWidget = ConstructObject<UGISLootContainerBaseWidget>(LootWidgetClass, Outer);
-			if (LootWidget)
-			{
-				ULocalPlayer* Player = GetWorld()->GetFirstLocalPlayerFromController(); //temporary
-				LootWidget->SetPlayerContext(FLocalPlayerContext(Player)); //temporary
-				LootWidget->Initialize();
-				int32 ItemCount = LootContainer->ItemToLoot.Num();
-				TArray<FGISLootSlotInfo> LootSlotInfos;
-				for (int32 Index = 0; Index < ItemCount; Index++)
-				{
-					FGISLootSlotInfo LootInfo;
-					LootInfo.SlotIndex = Index;
-					LootInfo.SlotData = LootContainer->ItemToLoot[Index];
-					LootInfo.OwningPickupActor = LootContainer;
-					LootSlotInfos.Add(LootInfo);
-				}
-				LootWidget->ItemsInfos = LootSlotInfos;
-				LootWidget->OwningPickupActor = LootContainer;
-				LootWidget->InitializeLootWidget();
-				LootWidget->AddToViewport();
-			}
-			//LootContainer->InteractingInventory = this;
-			//LootContainer->OpenLootWindow();
-		}
+		CurrentPickupActor = LootContainer;
+		ConstructLootPickingWidget();
 //	}
+}
+
+void UGISInventoryBaseComponent::ConstructLootPickingWidget()
+{
+	if (CurrentPickupActor)
+	{
+		if (LootWidget)
+		{
+			CurrentPickupActor->InteractingInventory = this;
+			int32 ItemCount = CurrentPickupActor->ItemToLoot.Num();
+			TArray<FGISLootSlotInfo> LootSlotInfos;
+			for (int32 Index = 0; Index < ItemCount; Index++)
+			{
+				FGISLootSlotInfo LootInfo;
+				LootInfo.SlotIndex = Index;
+				LootInfo.SlotData = CurrentPickupActor->ItemToLoot[Index];
+				LootInfo.OwningPickupActor = CurrentPickupActor;
+				LootSlotInfos.Add(LootInfo);
+			}
+			LootWidget->ItemsInfos = LootSlotInfos;
+			LootWidget->OwningPickupActor = CurrentPickupActor;
+			LootWidget->InitializeLootWidget();
+			LootWidget->SetVisibility(ESlateVisibility::Visible);
+		}
+		//LootContainer->InteractingInventory = this;
+		//LootContainer->OpenLootWindow();
+	}
 }
 
 void UGISInventoryBaseComponent::LootAllItems(class AGISPickupActor* LootContainer)
@@ -326,6 +343,11 @@ void UGISInventoryBaseComponent::LootOneItem(int32 ItemIndex, class AGISPickupAc
 		if (LootContainer)
 		{
 			AddItemToInventory(LootContainer->ItemToLoot[ItemIndex]);
+			//ok we removed one item. We need to rconstruct widgets, indexes etc, to make sure arry
+			//have proper indexes in first place.
+			LootContainer->ItemToLoot.RemoveAt(ItemIndex, 1, true);
+			//reconstruct widget.
+			OnItemLooted.Broadcast();
 		}
 	}
 }

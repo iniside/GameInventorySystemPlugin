@@ -11,6 +11,11 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGISOnInventoryLoaded);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FGISOnItemAdded, const FGISSlotUpdateData&, SlotUpdateInfo);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FGISOnItemSlotSwapped, const FGISSlotSwapInfo&, SlotSwapInfo);
 
+/*
+	We will use it, to reconstruct widget.
+*/
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGISOnItemLooted);
+
 /**
 	Note to self. I could probabaly use GameplayTags, to determine exactly how interaction between
 	various items, and components should interact.
@@ -95,7 +100,7 @@ public:
 	UPROPERTY(EditAnywhere, Instanced)
 		TSubclassOf<class UGISLootContainerBaseWidget> LootWidgetClass;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		class UGISLootContainerBaseWidget* LootWidget;
 
 	UPROPERTY(BlueprintReadOnly)
@@ -109,6 +114,19 @@ public:
 
 	UPROPERTY(BlueprintCallable, BlueprintAssignable)
 		FGISOnItemSlotSwapped OnItemSlotSwapped;
+
+	UPROPERTY()
+		FGISOnItemLooted OnItemLooted;
+private:
+	/*
+		Pickup actor that this inventory is interacting with. 
+		For now one inventory can interact with only one pickup actor.
+	*/
+	UPROPERTY()
+	class AGISPickupActor* CurrentPickupActor;
+	UFUNCTION()
+	void ConstructLootPickingWidget();
+
 private:
 	UPROPERTY(ReplicatedUsing = OnRep_SlotUpdate, RepRetry)
 	FGISSlotUpdateData SlotUpdateInfo;

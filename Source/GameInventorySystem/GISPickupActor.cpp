@@ -63,10 +63,10 @@ void AGISPickupActor::LootAllItems()
 
 void AGISPickupActor::LootSingleItem(int32 ItemIndexIn)
 {
-	//if (InteractingInventory.IsValid())
-	//{
-	//	InteractingInventory->LootOneItem(ItemIndexIn, this);
-	//}
+	if (InteractingInventory.IsValid())
+	{
+		InteractingInventory->LootOneItem(ItemIndexIn, this);
+	}
 }
 void AGISPickupActor::GetLifetimeReplicatedProps(TArray< class FLifetimeProperty > & OutLifetimeProps) const
 {

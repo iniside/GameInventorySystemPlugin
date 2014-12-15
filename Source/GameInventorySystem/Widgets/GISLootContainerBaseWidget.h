@@ -25,4 +25,7 @@ public:
 		class AGISPickupActor* OwningPickupActor;
 
 	void InitializeLootWidget();
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void PostLootWidgetInitialized();
 };
