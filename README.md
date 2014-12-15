@@ -1,6 +1,9 @@
 GameInventorySystemPlugin
 =========================
 
+<a href='https://pledgie.com/campaigns/27752'><img alt='Click here to lend your support to: Game Inventory System for Unreal Engine 4 and make a donation at pledgie.com !' src='https://pledgie.com/campaigns/27752.png?skin_name=chrome' border='0' ></a>
+
+
 The API is not yet finalized, but general idea is that you can derive from UGISInventoryBaseComponent
 and create new component, which can in turn store any arbitrary data.
 

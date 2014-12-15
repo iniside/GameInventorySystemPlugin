@@ -17,7 +17,7 @@ class GAMEINVENTORYSYSTEM_API AGISPickupActor : public AActor
 	GENERATED_UCLASS_BODY()
 public:
 	//Instanced
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced)
 		TArray<class UGISItemData*> ItemToLoot;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, replicated, Instanced)
