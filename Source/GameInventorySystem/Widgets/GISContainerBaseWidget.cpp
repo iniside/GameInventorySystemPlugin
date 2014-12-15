@@ -66,12 +66,13 @@ void UGISContainerBaseWidget::InitializeInventory()
 	if (InventoryComponent && InventoryTabs.Num() == 0)
 	{
 		int32 IndexCounter = 0;
-
+		UObject* Outer = GetWorld()->GetGameInstance() ? StaticCast<UObject*>(GetWorld()->GetGameInstance()) : StaticCast<UObject*>(GetWorld());
 		for (const FGISTabInfo& Tab : InventoryComponent->Tabs.InventoryTabs)
 		{
 			if (TabClass && SlotClass)
 			{
-				UGISTabBaseWidget* tabWidget = ConstructObject<UGISTabBaseWidget>(TabClass, this);
+
+				UGISTabBaseWidget* tabWidget = ConstructObject<UGISTabBaseWidget>(TabClass, Outer);
 				if (tabWidget)
 				{
 					ULocalPlayer* Player = InventoryComponent->GetWorld()->GetFirstLocalPlayerFromController(); //temporary
@@ -102,10 +103,11 @@ void UGISContainerBaseWidget::InitializeInventory()
 }
 void UGISContainerBaseWidget::Widget_OnItemAdded(const FGISSlotUpdateData& SlotUpdateInfo)
 {
+	UObject* Outer = GetWorld()->GetGameInstance() ? StaticCast<UObject*>(GetWorld()->GetGameInstance()) : StaticCast<UObject*>(GetWorld());
 //	UGISItemData* itemData = SlotUpdateInfo.SlotComponent->Tabs.InventoryTabs[SlotUpdateInfo.TabIndex].TabSlots[SlotUpdateInfo.SlotIndex].ItemData;
-	if (SlotUpdateInfo.SlotData)
+	if (SlotUpdateInfo.SlotData.IsValid())
 	{//check against replicated component and struct in tabs in it.
-		UGISItemBaseWidget* ItemWidget = ConstructObject<UGISItemBaseWidget>(ItemClass, this);
+		UGISItemBaseWidget* ItemWidget = ConstructObject<UGISItemBaseWidget>(ItemClass, Outer);
 		if (ItemWidget && InventoryComponent)
 		{
 			ULocalPlayer* Player = InventoryComponent->GetWorld()->GetFirstLocalPlayerFromController(); //temporary
@@ -165,9 +167,10 @@ void UGISContainerBaseWidget::Widget_OnItemSlotSwapped(const FGISSlotSwapInfo& S
 
 void UGISContainerBaseWidget::AddItem(const FGISSlotSwapInfo& SlotSwapInfo)
 {
-	if (!SlotSwapInfo.LastSlotData)
+	UObject* Outer = GetWorld()->GetGameInstance() ? StaticCast<UObject*>(GetWorld()->GetGameInstance()) : StaticCast<UObject*>(GetWorld());
+	if (!SlotSwapInfo.LastSlotData.IsValid())
 	{
-		UGISItemBaseWidget* ItemWidget = ConstructObject<UGISItemBaseWidget>(ItemClass, this);
+		UGISItemBaseWidget* ItemWidget = ConstructObject<UGISItemBaseWidget>(ItemClass, Outer);
 		if (ItemWidget && InventoryComponent)
 		{
 			ULocalPlayer* Player = InventoryComponent->GetWorld()->GetFirstLocalPlayerFromController(); //temporary
@@ -193,7 +196,7 @@ void UGISContainerBaseWidget::AddItem(const FGISSlotSwapInfo& SlotSwapInfo)
 	else
 	{
 		//construct target and last, since this is for test one will do just as well.
-		UGISItemBaseWidget* TargetItemWidget = ConstructObject<UGISItemBaseWidget>(ItemClass, this);
+		UGISItemBaseWidget* TargetItemWidget = ConstructObject<UGISItemBaseWidget>(ItemClass, Outer);
 		if (TargetItemWidget && InventoryComponent)
 		{
 			ULocalPlayer* Player = InventoryComponent->GetWorld()->GetFirstLocalPlayerFromController(); //temporary
@@ -203,7 +206,7 @@ void UGISContainerBaseWidget::AddItem(const FGISSlotSwapInfo& SlotSwapInfo)
 			//ItemWidget->LastSlotInfo = SlotInfo;
 		}
 
-		UGISItemBaseWidget* LastItemWidget = ConstructObject<UGISItemBaseWidget>(ItemClass, this);
+		UGISItemBaseWidget* LastItemWidget = ConstructObject<UGISItemBaseWidget>(ItemClass, Outer);
 		if (TargetItemWidget && InventoryComponent)
 		{
 			ULocalPlayer* Player = InventoryComponent->GetWorld()->GetFirstLocalPlayerFromController(); //temporary
@@ -245,7 +248,7 @@ void UGISContainerBaseWidget::AddItem(const FGISSlotSwapInfo& SlotSwapInfo)
 }
 void UGISContainerBaseWidget::RemoveItem(const FGISSlotSwapInfo& SlotSwapInfo)
 {
-	if (!SlotSwapInfo.LastSlotData)
+	if (!SlotSwapInfo.LastSlotData.IsValid())
 	{
 		UWidget* superWidget = InventoryTabs[SlotSwapInfo.LastTabIndex]->InventorySlots[SlotSwapInfo.LastSlotIndex]->GetWidgetFromName(DropSlottName);
 

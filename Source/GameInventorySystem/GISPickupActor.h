@@ -20,6 +20,14 @@ public:
 	UPROPERTY(EditAnywhere, Replicated, BlueprintReadWrite, Instanced)
 		TArray<class UGISItemData*> ItemToLoot;
 
+	/*
+		Is this actor currently looted ?
+
+		Only one player at time, can interact with this actor.
+	*/
+	UPROPERTY()
+		bool bIsCurrentlyBeingLooted;
+
 //	UPROPERTY(EditAnywhere, BlueprintReadWrite, replicated, Instanced)
 //		TArray<TSubclassOf<class UGISItemData> > ItemToLootClass;
 

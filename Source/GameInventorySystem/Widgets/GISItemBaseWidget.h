@@ -26,7 +26,7 @@ public:
 		FGISSlotInfo TargetSlotInfo;
 
 	UPROPERTY()
-		class UGISItemData* ItemData;
+		TWeakObjectPtr<class UGISItemData> ItemData;
 
 	/*
 		Probabaly can change them to pure.	

@@ -15,7 +15,7 @@ UGISItemBaseWidget::UGISItemBaseWidget(const FObjectInitializer& ObjectInitializ
 
 FText UGISItemBaseWidget::GetItemName() const
 {
-	if (ItemData)
+	if (ItemData.IsValid())
 	{
 		return ItemData->GetItemName();
 	}
@@ -24,7 +24,7 @@ FText UGISItemBaseWidget::GetItemName() const
 
 UTexture2D* UGISItemBaseWidget::GetIcon() const
 {
-	if (ItemData)
+	if (ItemData.IsValid())
 	{
 		return ItemData->GetImage();
 	}
@@ -33,7 +33,7 @@ UTexture2D* UGISItemBaseWidget::GetIcon() const
 
 FText UGISItemBaseWidget::GetDescription() const
 {
-	if (ItemData)
+	if (ItemData.IsValid())
 	{
 		return ItemData->GetDescription();
 	}

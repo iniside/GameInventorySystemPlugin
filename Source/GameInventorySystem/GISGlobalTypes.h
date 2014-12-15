@@ -36,7 +36,7 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 		int32 SlotIndex;
 	UPROPERTY(BlueprintReadOnly)
-	class UGISItemData* SlotData;
+		TWeakObjectPtr<class UGISItemData> SlotData;
 	UPROPERTY(BlueprintReadOnly)
 		TWeakObjectPtr<class UGISInventoryBaseComponent> SlotComponent;
 	UPROPERTY(BlueprintReadOnly)
@@ -53,7 +53,7 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 		int32 SlotIndex;
 	UPROPERTY(BlueprintReadOnly)
-		class UGISItemData* SlotData;
+		TWeakObjectPtr<class UGISItemData> SlotData;
 	UPROPERTY(BlueprintReadOnly)
 		TWeakObjectPtr<class UGISInventoryBaseComponent> SlotComponent;
 };
@@ -68,7 +68,7 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 		int32 LastSlotIndex;
 	UPROPERTY(BlueprintReadOnly)
-	class UGISItemData* LastSlotData;
+		TWeakObjectPtr<class UGISItemData> LastSlotData;
 	UPROPERTY(BlueprintReadOnly)
 		TWeakObjectPtr<class UGISInventoryBaseComponent> LastSlotComponent;
 	UPROPERTY(BlueprintReadOnly)
@@ -76,7 +76,7 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 		int32 TargetSlotIndex;
 	UPROPERTY(BlueprintReadOnly)
-	class UGISItemData* TargetSlotData;
+		TWeakObjectPtr<class UGISItemData> TargetSlotData;
 	UPROPERTY(BlueprintReadOnly)
 		TWeakObjectPtr<class UGISInventoryBaseComponent> TargetSlotComponent;
 };
@@ -91,7 +91,7 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 		int32 SlotTabIndex;
 	UPROPERTY(BlueprintReadWrite)
-	class UGISItemData* ItemData;
+		TWeakObjectPtr<class UGISItemData> ItemData;
 
 	UPROPERTY(BlueprintReadWrite)
 		TWeakObjectPtr<class UGISInventoryBaseComponent> CurrentInventoryComponent;

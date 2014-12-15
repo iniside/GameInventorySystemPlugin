@@ -186,8 +186,8 @@ void UGISInventoryBaseComponent::AddItemOnSlot(const FGISSlotInfo& TargetSlotTyp
 	if (TargetSlotType.CurrentInventoryComponent->Tabs.InventoryTabs[TargetSlotType.SlotTabIndex].TabSlots[TargetSlotType.SlotIndex].ItemData == nullptr)
 	{
 
-		UGISItemData* TargetItem = LastSlotType.CurrentInventoryComponent->Tabs.InventoryTabs[LastSlotType.SlotTabIndex].TabSlots[LastSlotType.SlotIndex].ItemData;
-		UGISItemData* LastItem = TargetSlotType.CurrentInventoryComponent->Tabs.InventoryTabs[TargetSlotType.SlotTabIndex].TabSlots[TargetSlotType.SlotIndex].ItemData; //Tabs.InventoryTabs[TargetSlotType.SlotTabIndex].TabSlots[TargetSlotType.SlotIndex].ItemData;
+		TWeakObjectPtr<UGISItemData> TargetItem = LastSlotType.CurrentInventoryComponent->Tabs.InventoryTabs[LastSlotType.SlotTabIndex].TabSlots[LastSlotType.SlotIndex].ItemData;
+		TWeakObjectPtr<UGISItemData> LastItem = TargetSlotType.CurrentInventoryComponent->Tabs.InventoryTabs[TargetSlotType.SlotTabIndex].TabSlots[TargetSlotType.SlotIndex].ItemData; //Tabs.InventoryTabs[TargetSlotType.SlotTabIndex].TabSlots[TargetSlotType.SlotIndex].ItemData;
 
 		TargetSlotType.CurrentInventoryComponent->Tabs.InventoryTabs[TargetSlotType.SlotTabIndex].TabSlots[TargetSlotType.SlotIndex].ItemData = TargetItem;
 		LastSlotType.CurrentInventoryComponent->Tabs.InventoryTabs[LastSlotType.SlotTabIndex].TabSlots[LastSlotType.SlotIndex].ItemData = nullptr;
@@ -209,8 +209,8 @@ void UGISInventoryBaseComponent::AddItemOnSlot(const FGISSlotInfo& TargetSlotTyp
 	}
 	else
 	{
-		UGISItemData* TargetItem = LastSlotType.CurrentInventoryComponent->Tabs.InventoryTabs[LastSlotType.SlotTabIndex].TabSlots[LastSlotType.SlotIndex].ItemData;
-		UGISItemData* LastItem = TargetSlotType.CurrentInventoryComponent->Tabs.InventoryTabs[TargetSlotType.SlotTabIndex].TabSlots[TargetSlotType.SlotIndex].ItemData; //Tabs.InventoryTabs[TargetSlotType.SlotTabIndex].TabSlots[TargetSlotType.SlotIndex].ItemData;
+		TWeakObjectPtr<UGISItemData> TargetItem = LastSlotType.CurrentInventoryComponent->Tabs.InventoryTabs[LastSlotType.SlotTabIndex].TabSlots[LastSlotType.SlotIndex].ItemData;
+		TWeakObjectPtr<UGISItemData> LastItem = TargetSlotType.CurrentInventoryComponent->Tabs.InventoryTabs[TargetSlotType.SlotTabIndex].TabSlots[TargetSlotType.SlotIndex].ItemData; //Tabs.InventoryTabs[TargetSlotType.SlotTabIndex].TabSlots[TargetSlotType.SlotIndex].ItemData;
 
 		TargetSlotType.CurrentInventoryComponent->Tabs.InventoryTabs[TargetSlotType.SlotTabIndex].TabSlots[TargetSlotType.SlotIndex].ItemData = TargetItem;
 		LastSlotType.CurrentInventoryComponent->Tabs.InventoryTabs[LastSlotType.SlotTabIndex].TabSlots[LastSlotType.SlotIndex].ItemData = LastItem;
@@ -277,37 +277,58 @@ bool UGISInventoryBaseComponent::ServerLootItems_Validate(class AGISPickupActor*
 
 void UGISInventoryBaseComponent::GetLootContainer(class AGISPickupActor* LootContainer)
 {
-	//if (GetOwnerRole() < ROLE_Authority)
-	//{
-	//	ServerGetLootContainer(LootContainer);
-	//}
-	//else
-//	{
-	LootContainer->SetOwner(GetOwner());
-		CurrentPickupActor = LootContainer;
-		ConstructLootPickingWidget();
-//	}
+	if (GetOwnerRole() < ROLE_Authority)
+	{
+		ServerGetLootContainer(LootContainer);
+	}
+	else
+	{
+		if (!LootContainer->bIsCurrentlyBeingLooted)
+		{
+			LootContainer->bIsCurrentlyBeingLooted = true;
+			for (UGISItemData* Item : LootContainer->ItemToLoot)
+			{
+				UGISItemData* test = ConstructObject<UGISItemData>(Item->GetClass(), this, NAME_None, RF_NoFlags, Item);
+				LootedItems.Add(test);
+			}
+			//LootedItems = LootContainer->ItemToLoot;
+			CurrentPickupActor = LootContainer;
+			ClientConstructWidget();
+		}
+	}
 }
-
+void UGISInventoryBaseComponent::OnRep_LootedItems()
+{
+	ConstructLootPickingWidget();
+}
+void UGISInventoryBaseComponent::OnRep_PickupActor()
+{
+	ConstructLootPickingWidget();
+}
+void UGISInventoryBaseComponent::ClientConstructWidget_Implementation()
+{
+	ConstructLootPickingWidget();
+}
 void UGISInventoryBaseComponent::ConstructLootPickingWidget()
 {
-	if (CurrentPickupActor)
+	if (LootedItems.Num() > 0)
 	{
 		if (LootWidget)
 		{
 			CurrentPickupActor->InteractingInventory = this;
-			int32 ItemCount = CurrentPickupActor->ItemToLoot.Num();
+			int32 ItemCount = LootedItems.Num();
 			TArray<FGISLootSlotInfo> LootSlotInfos;
 			for (int32 Index = 0; Index < ItemCount; Index++)
 			{
 				FGISLootSlotInfo LootInfo;
 				LootInfo.SlotIndex = Index;
-				LootInfo.SlotData = CurrentPickupActor->ItemToLoot[Index];
-				LootInfo.OwningPickupActor = CurrentPickupActor;
+				LootInfo.SlotData = LootedItems[Index];
+			//	LootInfo.OwningPickupActor = CurrentPickupActor;
+				LootInfo.SlotComponent = this;
 				LootSlotInfos.Add(LootInfo);
 			}
 			LootWidget->ItemsInfos = LootSlotInfos;
-			LootWidget->OwningPickupActor = CurrentPickupActor;
+			//LootWidget->OwningPickupActor = CurrentPickupActor;
 			LootWidget->InitializeLootWidget();
 			LootWidget->SetVisibility(ESlateVisibility::Visible);
 		}
@@ -333,30 +354,32 @@ void UGISInventoryBaseComponent::LootAllItems(class AGISPickupActor* LootContain
 		}
 	//}
 }
-void UGISInventoryBaseComponent::LootOneItem(int32 ItemIndex, class AGISPickupActor* LootContainer)
+void UGISInventoryBaseComponent::LootOneItem(int32 ItemIndex)
 {
 	if (GetOwnerRole() < ROLE_Authority)
 	{
-		SeverLootOneItem(ItemIndex, LootContainer);
+		SeverLootOneItem(ItemIndex);
 	}
 	else
 	{
-		if (LootContainer)
+		if (CurrentPickupActor)
 		{
-			AddItemToInventory(LootContainer->ItemToLoot[ItemIndex]);
+			AddItemToInventory(LootedItems[ItemIndex]);
 			//ok we removed one item. We need to rconstruct widgets, indexes etc, to make sure arry
 			//have proper indexes in first place.
-			LootContainer->ItemToLoot.RemoveAt(ItemIndex, 1, true);
+			LootedItems.RemoveAt(ItemIndex, 1, true);
+			CurrentPickupActor->ItemToLoot.RemoveAt(ItemIndex, 1, true);
 			//reconstruct widget.
+		//	CurrentPickupActor->ItemToLoot = LootedItems;
 			ClientReconstructLootWidget();
 		}
 	}
 }
-void UGISInventoryBaseComponent::SeverLootOneItem_Implementation(int32 ItemIndex, class AGISPickupActor* LootContainer)
+void UGISInventoryBaseComponent::SeverLootOneItem_Implementation(int32 ItemIndex)
 {
-	LootOneItem(ItemIndex, LootContainer);
+	LootOneItem(ItemIndex);
 }
-bool UGISInventoryBaseComponent::SeverLootOneItem_Validate(int32 ItemIndex, class AGISPickupActor* LootContainer)
+bool UGISInventoryBaseComponent::SeverLootOneItem_Validate(int32 ItemIndex)
 {
 	return true;
 }
@@ -371,7 +394,7 @@ bool UGISInventoryBaseComponent::ServerGetLootContainer_Validate(class AGISPicku
 	return true;
 }
 
-void UGISInventoryBaseComponent::ClientReconstructLootWidget()
+void UGISInventoryBaseComponent::ClientReconstructLootWidget_Implementation()
 {
 	OnItemLooted.Broadcast();
 }
@@ -402,6 +425,8 @@ void UGISInventoryBaseComponent::GetLifetimeReplicatedProps(TArray< class FLifet
 	DOREPLIFETIME_CONDITION(UGISInventoryBaseComponent, Tabs, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(UGISInventoryBaseComponent, SlotUpdateInfo, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(UGISInventoryBaseComponent, SlotSwapInfo, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(UGISInventoryBaseComponent, CurrentPickupActor, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(UGISInventoryBaseComponent, LootedItems, COND_OwnerOnly);
 }
 
 bool UGISInventoryBaseComponent::ReplicateSubobjects(class UActorChannel *Channel, class FOutBunch *Bunch, FReplicationFlags *RepFlags)
@@ -412,24 +437,31 @@ bool UGISInventoryBaseComponent::ReplicateSubobjects(class UActorChannel *Channe
 	{
 		for (const FGISSlotInfo& SlotItem : TabInfo.TabSlots)
 		{
-			if (SlotItem.ItemData)
+			if (SlotItem.ItemData.IsValid())
 			{
-				WroteSomething |= Channel->ReplicateSubobject(const_cast<UGISItemData*>(SlotItem.ItemData), *Bunch, *RepFlags);
+				WroteSomething |= Channel->ReplicateSubobject(const_cast<UGISItemData*>(SlotItem.ItemData.Get()), *Bunch, *RepFlags);
 			}
 		}
 	}
 
-	if (SlotUpdateInfo.SlotData)
+	if (SlotUpdateInfo.SlotData.IsValid())
 	{
-		WroteSomething |= Channel->ReplicateSubobject(const_cast<UGISItemData*>(SlotUpdateInfo.SlotData), *Bunch, *RepFlags);
+		WroteSomething |= Channel->ReplicateSubobject(const_cast<UGISItemData*>(SlotUpdateInfo.SlotData.Get()), *Bunch, *RepFlags);
 	}
-	if (SlotSwapInfo.LastSlotData)
+	if (SlotSwapInfo.LastSlotData.IsValid())
 	{
-		WroteSomething |= Channel->ReplicateSubobject(const_cast<UGISItemData*>(SlotSwapInfo.LastSlotData), *Bunch, *RepFlags);
+		WroteSomething |= Channel->ReplicateSubobject(const_cast<UGISItemData*>(SlotSwapInfo.LastSlotData.Get()), *Bunch, *RepFlags);
 	}
-	if (SlotSwapInfo.TargetSlotData)
+	if (SlotSwapInfo.TargetSlotData.IsValid())
 	{
-		WroteSomething |= Channel->ReplicateSubobject(const_cast<UGISItemData*>(SlotSwapInfo.TargetSlotData), *Bunch, *RepFlags);
+		WroteSomething |= Channel->ReplicateSubobject(const_cast<UGISItemData*>(SlotSwapInfo.TargetSlotData.Get()), *Bunch, *RepFlags);
+	}
+	for (const UGISItemData* data : LootedItems)
+	{
+		if (data)
+		{
+			WroteSomething |= Channel->ReplicateSubobject(const_cast<UGISItemData*>(data), *Bunch, *RepFlags);
+		}
 	}
 	return WroteSomething;
 }
@@ -439,9 +471,9 @@ void UGISInventoryBaseComponent::GetSubobjectsWithStableNamesForNetworking(TArra
 	{
 		for (const FGISSlotInfo& SlotItem : TabInfo.TabSlots)
 		{
-			if (SlotItem.ItemData)
+			if (SlotItem.ItemData.IsValid())
 			{
-				Objs.Add(const_cast<UGISItemData*>(SlotItem.ItemData));
+				Objs.Add(const_cast<UGISItemData*>(SlotItem.ItemData.Get()));
 			}
 		}
 	}

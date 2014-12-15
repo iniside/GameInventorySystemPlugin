@@ -20,11 +20,11 @@ AGISPickupActor::AGISPickupActor(const FObjectInitializer& ObjectInitializer)
 
 void AGISPickupActor::BeginPlay()
 {
-	for (TSubclassOf<UGISItemData> Item : ItemToLootClass)
-	{
-		UGISItemData* itemData = ConstructObject<UGISItemData>(Item, this);
-		ItemToLoot.Add(itemData);
-	}
+	//for (TSubclassOf<UGISItemData> Item : ItemToLootClass)
+	//{
+	//	UGISItemData* itemData = ConstructObject<UGISItemData>(Item, this);
+	//	ItemToLoot.Add(itemData);
+	//}
 }
 void AGISPickupActor::OpenLootWindow()
 {
@@ -44,16 +44,16 @@ void AGISPickupActor::LootAllItems()
 
 void AGISPickupActor::LootSingleItem(int32 ItemIndexIn)
 {
-	if (InteractingInventory.IsValid())
-	{
-		InteractingInventory->LootOneItem(ItemIndexIn, this);
-	}
+	//if (InteractingInventory.IsValid())
+//	{
+//		InteractingInventory->LootOneItem(ItemIndexIn, this);
+//	}
 }
 void AGISPickupActor::GetLifetimeReplicatedProps(TArray< class FLifetimeProperty > & OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME(AGISPickupActor, ItemToLootClass);
+	DOREPLIFETIME(AGISPickupActor, ItemToLoot);
 }
 bool AGISPickupActor::ReplicateSubobjects(class UActorChannel *Channel, class FOutBunch *Bunch, FReplicationFlags *RepFlags)
 {
@@ -70,13 +70,13 @@ bool AGISPickupActor::ReplicateSubobjects(class UActorChannel *Channel, class FO
 }
 void AGISPickupActor::GetSubobjectsWithStableNamesForNetworking(TArray<UObject*>& Objs)
 {
-	for (const UGISItemData* SlotItem : ItemToLoot)
-		{
-			if (SlotItem)
-			{
-				Objs.Add(const_cast<UGISItemData*>(SlotItem));
-			}
-		}
+	//for (const UGISItemData* SlotItem : ItemToLoot)
+	//	{
+	//		if (SlotItem)
+	//		{
+	//			Objs.Add(const_cast<UGISItemData*>(SlotItem));
+	//		}
+	//	}
 }
 
 /** Called on the actor when a new subobject is dynamically created via replication */
@@ -84,11 +84,11 @@ void AGISPickupActor::OnSubobjectCreatedFromReplication(UObject *NewSubobject)
 {
 	Super::OnSubobjectCreatedFromReplication(NewSubobject);
 
-	UGISItemData* newItemData = Cast<UGISItemData>(NewSubobject);
-	if (newItemData)
-	{
-		ItemToLoot.Add(newItemData);
-	}
+	//UGISItemData* newItemData = Cast<UGISItemData>(NewSubobject);
+	//if (newItemData)
+	//{
+	//	ItemToLoot.Add(newItemData);
+	//}
 }
 
 /** Called on the actor when a new subobject is dynamically created via replication */

@@ -122,8 +122,15 @@ private:
 		Pickup actor that this inventory is interacting with. 
 		For now one inventory can interact with only one pickup actor.
 	*/
-	UPROPERTY()
+	UPROPERTY(ReplicatedUsing=OnRep_PickupActor)
 	class AGISPickupActor* CurrentPickupActor;
+
+	UFUNCTION()
+		void OnRep_PickupActor();
+	UPROPERTY(ReplicatedUsing = OnRep_LootedItems)
+		TArray<UGISItemData*> LootedItems;
+	UFUNCTION()
+		void OnRep_LootedItems();
 	UFUNCTION()
 	void ConstructLootPickingWidget();
 
@@ -217,9 +224,9 @@ public:
 	UFUNCTION(Server, Reliable, WithValidation)
 		virtual void ServerGetLootContainer(class AGISPickupActor* LootContainer);
 
-	void LootOneItem(int32 ItemIndex, class AGISPickupActor* LootContainer);
+	void LootOneItem(int32 ItemIndex);
 	UFUNCTION(Server, Reliable, WithValidation)
-	void SeverLootOneItem(int32 ItemIndex, class AGISPickupActor* LootContainer);
+	void SeverLootOneItem(int32 ItemIndex);
 
 	void LootAllItems(class AGISPickupActor* LootContainer);
 
@@ -237,6 +244,12 @@ public:
 
 	UFUNCTION(Client, Reliable)
 		void ClientLoadInventory();
+
+	UFUNCTION(Client, Reliable)
+		void ClientReconstructLootWidget();
+
+	UFUNCTION(Client, Reliable)
+		void ClientConstructWidget();
 	void PostInventoryInitialized();
 
 

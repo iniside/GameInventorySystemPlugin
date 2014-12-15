@@ -4,7 +4,7 @@
 
 #include "../GISItemData.h"
 #include "../GISPickupActor.h"
-
+#include "../GISInventoryBaseComponent.h"
 #include "GISLootSlotBaseWidget.h"
 
 UGISLootSlotBaseWidget::UGISLootSlotBaseWidget(const FObjectInitializer& ObjectInitializer)
@@ -15,13 +15,13 @@ UGISLootSlotBaseWidget::UGISLootSlotBaseWidget(const FObjectInitializer& ObjectI
 
 UGISLootSlotBaseWidget::~UGISLootSlotBaseWidget()
 {
-	LootSlotInfo.SlotData = nullptr;
+	LootSlotInfo.SlotData.Reset();
 	LootSlotInfo.SlotComponent.Reset();
 	LootSlotInfo.OwningPickupActor = nullptr;
 }
 UTexture2D* UGISLootSlotBaseWidget::GetIcon() const
 {
-	if (LootSlotInfo.SlotData)
+	if (LootSlotInfo.SlotData.IsValid())
 	{
 		return LootSlotInfo.SlotData->GetImage();
 	}
@@ -34,9 +34,9 @@ FEventReply UGISLootSlotBaseWidget::OnMouseButtonDown_Implementation(FGeometry M
 	FEventReply Reply;
 	if (MouseEvent.GetEffectingButton() == EKeys::LeftMouseButton)
 	{
-		if (LootSlotInfo.OwningPickupActor)
+		if (LootSlotInfo.SlotComponent.IsValid())
 		{
-			LootSlotInfo.OwningPickupActor->LootSingleItem(LootSlotInfo.SlotIndex);
+			LootSlotInfo.SlotComponent->LootOneItem(LootSlotInfo.SlotIndex);
 		}
 	}
 	return Reply;
