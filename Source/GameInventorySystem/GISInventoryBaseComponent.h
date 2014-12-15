@@ -56,9 +56,11 @@ public:
 		TabIndex - easily accessible Index of this tab.
 		TabSlots<> array of inventory Slots in this Tab.
 	*/
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, RepRetry, Category = "Inventory")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, ReplicatedUsing=OnRep_InventoryCreated, RepRetry, Category = "Inventory")
 		FGISInventoryTab Tabs;
 
+	UFUNCTION()
+		void OnRep_InventoryCreated();
 	/*
 
 	*/
@@ -86,8 +88,18 @@ public:
 	UPROPERTY(EditAnywhere, Instanced)
 		TSubclassOf<class UGISContainerBaseWidget> InventoryContainerClass;
 
+	/*
+		This is very bad pack. When componeents will work with normal objects (pointers)
+		It should be replaced with class UGISLootContainerBaseWidget* LootWidget;
+	*/
+	UPROPERTY(EditAnywhere, Instanced)
+		TSubclassOf<class UGISLootContainerBaseWidget> LootWidgetClass;
+
+	UPROPERTY(EditAnywhere)
+		class UGISLootContainerBaseWidget* LootWidget;
+
 	UPROPERTY(BlueprintReadOnly)
-	class UGISContainerBaseWidget* InventoryContainer;
+		class UGISContainerBaseWidget* InventoryContainer;
 
 	UPROPERTY(BlueprintCallable, BlueprintAssignable)
 		FGISOnInventoryLoaded OnInventoryLoaded;
@@ -97,7 +109,17 @@ public:
 
 	UPROPERTY(BlueprintCallable, BlueprintAssignable)
 		FGISOnItemSlotSwapped OnItemSlotSwapped;
+private:
+	UPROPERTY(ReplicatedUsing = OnRep_SlotUpdate, RepRetry)
+	FGISSlotUpdateData SlotUpdateInfo;
+	UFUNCTION()
+		void OnRep_SlotUpdate();
 
+	UPROPERTY(ReplicatedUsing = OnRep_SlotSwap, RepRetry)
+	FGISSlotSwapInfo SlotSwapInfo;
+	UFUNCTION()
+		void OnRep_SlotSwap();
+public:
 
 	virtual void InitializeComponent() override;
 	virtual void PostInitProperties() override;
@@ -155,19 +177,48 @@ public:
 	*/
 	UFUNCTION(BlueprintCallable, Category = "Game Inventory System")
 		virtual void RemoveItem(const FGISSlotInfo& TargetSlotType);
+
+	/*
+		Test function. Will loot everything from container!
+	*/
+	UFUNCTION(BlueprintCallable, Category = "Game Inventory System")
+		virtual void LootItems(class AGISPickupActor* LootContainer);
+	UFUNCTION(Server, Reliable, WithValidation)
+		virtual void ServerLootItems(class AGISPickupActor* LootContainer);
+
+	/*
+		Technically you should call it on server, since you should trace for it only
+		on server ;). 
+	*/
+	UFUNCTION(BlueprintCallable, Category = "Game Inventory System")
+		virtual void GetLootContainer(class AGISPickupActor* LootContainer);
+	/*
+		So in reality this function should never get called.
+		But if for some reason, you really want to trace on client.. Here you go.
+	*/
+	UFUNCTION(Server, Reliable, WithValidation)
+		virtual void ServerGetLootContainer(class AGISPickupActor* LootContainer);
+
+	void LootOneItem(int32 ItemIndex, class AGISPickupActor* LootContainer);
+	UFUNCTION(Server, Reliable, WithValidation)
+	void SeverLootOneItem(int32 ItemIndex, class AGISPickupActor* LootContainer);
+
+	void LootAllItems(class AGISPickupActor* LootContainer);
+
 	/*
 		Heyyy client, would you be so nice, and update this slot with this item ? Thanks!
 
 		On more serious note, it will just call OnItemAdded delegate on client.
 	*/
 	UFUNCTION(Client, Reliable)
-		void ClientUpdateInventory(const FGISSlotUpdateData& SlotUpdateInfo);
+		void ClientUpdateInventory(const FGISSlotUpdateData& SlotUpdateInfoIn);
 
 
 	UFUNCTION(Client, Reliable)
-		void ClientSlotSwap(const FGISSlotSwapInfo& SlotSwapInfo);
+		void ClientSlotSwap(const FGISSlotSwapInfo& SlotSwapInfoIn);
 
-
+	UFUNCTION(Client, Reliable)
+		void ClientLoadInventory();
 	void PostInventoryInitialized();
 
 

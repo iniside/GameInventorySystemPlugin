@@ -20,6 +20,10 @@ FEventReply UGISSlotBaseWidget::OnMouseButtonDown_Implementation(FGeometry MyGeo
 	FEventReply Reply;
 	if (MouseEvent.GetEffectingButton() == EKeys::LeftMouseButton)
 	{
+		//no item no mouse interaction for dragging and dropping.
+		if (!SlotInfo.ItemData)
+			return Reply;
+
 		TSharedPtr<SWidget> DetectingDrag = this->GetCachedWidget();
 		if (DetectingDrag.IsValid())
 		{
@@ -42,6 +46,7 @@ void UGISSlotBaseWidget::OnDragDetected_Implementation(FGeometry MyGeometry, con
 			ItemWidget->SetPlayerContext(FLocalPlayerContext(Player)); //temporary
 			ItemWidget->Initialize();
 			ItemWidget->LastSlotInfo = SlotInfo;
+			ItemWidget->ItemData = SlotInfo.ItemData;
 		}
 
 		UDragDropOperation* DragDropOp = ConstructObject<UDragDropOperation>(UDragDropOperation::StaticClass(), this);

@@ -21,6 +21,50 @@ void UGISContainerBaseWidget::InitializeContainer()
 {
 	if (InventoryComponent)
 	{
+		//int32 IndexCounter = 0;
+
+		//for (const FGISTabInfo& Tab : InventoryComponent->Tabs.InventoryTabs)
+		//{
+		//	if (TabClass && SlotClass)
+		//	{
+		//		UGISTabBaseWidget* tabWidget = ConstructObject<UGISTabBaseWidget>(TabClass, this);
+		//		if (tabWidget)
+		//		{
+		//			ULocalPlayer* Player = InventoryComponent->GetWorld()->GetFirstLocalPlayerFromController(); //temporary
+		//			tabWidget->SetPlayerContext(FLocalPlayerContext(Player)); //temporary
+		//			tabWidget->Initialize();
+		//			tabWidget->TabInfo = Tab;
+
+		//			
+		//			for (const FGISSlotInfo& Slot : Tab.TabSlots)
+		//			{
+		//				UGISSlotBaseWidget* slotWidget = ConstructObject<UGISSlotBaseWidget>(SlotClass, this);
+		//				if (slotWidget)
+		//				{
+		//					ULocalPlayer* Player = InventoryComponent->GetWorld()->GetFirstLocalPlayerFromController(); //temporary
+		//					slotWidget->SetPlayerContext(FLocalPlayerContext(Player)); //temporary
+		//					slotWidget->Initialize();
+		//					slotWidget->SlotInfo = Slot;
+		//					slotWidget->GISItemClass = ItemClass;
+		//					tabWidget->InventorySlots.Add(slotWidget);
+		//				}
+		//			}
+
+		//			InventoryTabs.Add(tabWidget);
+		//		}
+		//	}
+		//}
+		//bind functions to delegates:
+		InventoryComponent->OnInventoryLoaded.AddDynamic(this, &UGISContainerBaseWidget::InitializeInventory);
+		InventoryComponent->OnItemAdded.AddDynamic(this, &UGISContainerBaseWidget::Widget_OnItemAdded);
+		InventoryComponent->OnItemSlotSwapped.AddDynamic(this, &UGISContainerBaseWidget::Widget_OnItemSlotSwapped);
+		//InitializeInventory();
+	}
+}
+void UGISContainerBaseWidget::InitializeInventory()
+{
+	if (InventoryComponent && InventoryTabs.Num() == 0)
+	{
 		int32 IndexCounter = 0;
 
 		for (const FGISTabInfo& Tab : InventoryComponent->Tabs.InventoryTabs)
@@ -35,7 +79,7 @@ void UGISContainerBaseWidget::InitializeContainer()
 					tabWidget->Initialize();
 					tabWidget->TabInfo = Tab;
 
-					
+
 					for (const FGISSlotInfo& Slot : Tab.TabSlots)
 					{
 						UGISSlotBaseWidget* slotWidget = ConstructObject<UGISSlotBaseWidget>(SlotClass, this);
@@ -54,25 +98,30 @@ void UGISContainerBaseWidget::InitializeContainer()
 				}
 			}
 		}
-		//bind functions to delegates:
-		InventoryComponent->OnItemAdded.AddDynamic(this, &UGISContainerBaseWidget::Widget_OnItemAdded);
-		InventoryComponent->OnItemSlotSwapped.AddDynamic(this, &UGISContainerBaseWidget::Widget_OnItemSlotSwapped);
 	}
 }
-
 void UGISContainerBaseWidget::Widget_OnItemAdded(const FGISSlotUpdateData& SlotUpdateInfo)
 {
+//	UGISItemData* itemData = SlotUpdateInfo.SlotComponent->Tabs.InventoryTabs[SlotUpdateInfo.TabIndex].TabSlots[SlotUpdateInfo.SlotIndex].ItemData;
 	if (SlotUpdateInfo.SlotData)
-	{
+	{//check against replicated component and struct in tabs in it.
 		UGISItemBaseWidget* ItemWidget = ConstructObject<UGISItemBaseWidget>(ItemClass, this);
 		if (ItemWidget && InventoryComponent)
 		{
 			ULocalPlayer* Player = InventoryComponent->GetWorld()->GetFirstLocalPlayerFromController(); //temporary
 			ItemWidget->SetPlayerContext(FLocalPlayerContext(Player)); //temporary
 			ItemWidget->Initialize();
+			ItemWidget->ItemData = SlotUpdateInfo.SlotData;
 			//ItemWidget->LastSlotInfo = SlotInfo;
 		}
 		
+		FGISSlotInfo SlotInfo;
+		SlotInfo.CurrentInventoryComponent = SlotUpdateInfo.SlotComponent;
+		SlotInfo.ItemData = SlotUpdateInfo.SlotData;
+		SlotInfo.SlotIndex = SlotUpdateInfo.SlotIndex;
+		SlotInfo.SlotTabIndex = SlotUpdateInfo.TabIndex;
+		InventoryTabs[SlotUpdateInfo.TabIndex]->InventorySlots[SlotUpdateInfo.SlotIndex]->SlotInfo = SlotInfo;
+
 		UWidget* superWidget = InventoryTabs[SlotUpdateInfo.TabIndex]->InventorySlots[SlotUpdateInfo.SlotIndex]->GetWidgetFromName(TEXT("OverlaySlot"));
 		
 		UOverlay* overlay = Cast<UOverlay>(superWidget);
@@ -91,11 +140,11 @@ void UGISContainerBaseWidget::Widget_OnItemSlotSwapped(const FGISSlotSwapInfo& S
 {
 	if (SlotSwapInfo.LastSlotComponent == SlotSwapInfo.TargetSlotComponent)
 	{
-		if (!SlotSwapInfo.LastSlotData)
-		{
+	//	if (!SlotSwapInfo.LastSlotData)
+	//	{
 			RemoveItem(SlotSwapInfo);
 			AddItem(SlotSwapInfo);
-		}
+	//	}
 	}
 	//so we targeted different component with out drop action.
 	//we need to handle it! but how...
@@ -127,6 +176,12 @@ void UGISContainerBaseWidget::AddItem(const FGISSlotSwapInfo& SlotSwapInfo)
 			ItemWidget->ItemData = SlotSwapInfo.TargetSlotData;
 			//ItemWidget->LastSlotInfo = SlotInfo;
 		}
+		FGISSlotInfo TargetSlotInfo;
+		TargetSlotInfo.CurrentInventoryComponent = SlotSwapInfo.TargetSlotComponent;
+		TargetSlotInfo.ItemData = SlotSwapInfo.TargetSlotData;
+		TargetSlotInfo.SlotIndex = SlotSwapInfo.TargetSlotIndex;
+		TargetSlotInfo.SlotTabIndex = SlotSwapInfo.TargetTabIndex;
+		InventoryTabs[SlotSwapInfo.TargetTabIndex]->InventorySlots[SlotSwapInfo.TargetSlotIndex]->SlotInfo = TargetSlotInfo;
 		UWidget* superWidget = InventoryTabs[SlotSwapInfo.TargetTabIndex]->InventorySlots[SlotSwapInfo.TargetSlotIndex]->GetWidgetFromName(DropSlottName);
 
 		UOverlay* overlay = Cast<UOverlay>(superWidget);
@@ -157,6 +212,21 @@ void UGISContainerBaseWidget::AddItem(const FGISSlotSwapInfo& SlotSwapInfo)
 			LastItemWidget->ItemData = SlotSwapInfo.LastSlotData;
 			//ItemWidget->LastSlotInfo = SlotInfo;
 		}
+		FGISSlotInfo TargetSlotInfo;
+		TargetSlotInfo.CurrentInventoryComponent = SlotSwapInfo.TargetSlotComponent;
+		TargetSlotInfo.ItemData = SlotSwapInfo.TargetSlotData;
+		TargetSlotInfo.SlotIndex = SlotSwapInfo.TargetSlotIndex;
+		TargetSlotInfo.SlotTabIndex = SlotSwapInfo.TargetTabIndex;
+		InventoryTabs[SlotSwapInfo.TargetTabIndex]->InventorySlots[SlotSwapInfo.TargetSlotIndex]->SlotInfo = TargetSlotInfo;
+
+		FGISSlotInfo LastSlotInfo;
+		LastSlotInfo.CurrentInventoryComponent = SlotSwapInfo.LastSlotComponent;
+		LastSlotInfo.ItemData = SlotSwapInfo.LastSlotData;
+		LastSlotInfo.SlotIndex = SlotSwapInfo.LastSlotIndex;
+		LastSlotInfo.SlotTabIndex = SlotSwapInfo.LastTabIndex;
+
+		InventoryTabs[SlotSwapInfo.LastTabIndex]->InventorySlots[SlotSwapInfo.LastSlotIndex]->SlotInfo = LastSlotInfo;
+
 		UWidget* lastSlotWidget = InventoryTabs[SlotSwapInfo.LastTabIndex]->InventorySlots[SlotSwapInfo.LastSlotIndex]->GetWidgetFromName(DropSlottName);
 		UWidget* targetSlotWidget = InventoryTabs[SlotSwapInfo.TargetTabIndex]->InventorySlots[SlotSwapInfo.TargetSlotIndex]->GetWidgetFromName(DropSlottName);
 		

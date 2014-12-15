@@ -18,28 +18,28 @@ class GAMEINVENTORYSYSTEM_API UGISContainerBaseWidget : public UUserWidget
 public:
 	virtual void InitializeContainer();
 	/*
-		Type of tab used in this container.
+		Type of tab used in this container. meta = (ExposeOnSpawn)
 	*/
-	UPROPERTY(EditAnywhere, meta = (ExposeOnSpawn), Category = "Inventory")
+	UPROPERTY(EditAnywhere, Category = "Inventory")
 		TSubclassOf<class UGISTabBaseWidget> TabClass;
 
 	/*
 		Type of slot used in this container.
 	*/
-	UPROPERTY(EditAnywhere, meta = (ExposeOnSpawn), Category = "Inventory")
+	UPROPERTY(EditAnywhere, Category = "Inventory")
 		TSubclassOf<class UGISSlotBaseWidget> SlotClass;
 
 	/*
 		Type if item widget, which can be contained in slot.
 	*/
-	UPROPERTY(EditAnywhere, meta = (ExposeOnSpawn), Category = "Inventory")
+	UPROPERTY(EditAnywhere, Category = "Inventory")
 		TSubclassOf<class UGISItemBaseWidget> ItemClass;
 
 	/*
 		Name of drop slot, which will contain ItemWidget.
 
 	*/
-	UPROPERTY(EditAnywhere, meta = (ExposeOnSpawn), Category = "Inventory")
+	UPROPERTY(EditAnywhere, Category = "Inventory")
 		FName DropSlottName;
 
 	/**
@@ -71,4 +71,7 @@ public:
 
 	void AddItem(const FGISSlotSwapInfo& SlotSwapInfo);
 	void RemoveItem(const FGISSlotSwapInfo& SlotSwapInfo);
+
+	UFUNCTION()
+	void InitializeInventory();
 };

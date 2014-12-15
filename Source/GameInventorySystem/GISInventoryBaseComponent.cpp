@@ -6,7 +6,10 @@
 
 #include "GISItemData.h"
 #include "IGISPickupItem.h"
+#include "GISPickupActor.h"
+
 #include "Widgets/GISContainerBaseWidget.h"
+#include "Widgets/GISLootContainerBaseWidget.h"
 
 #include "Net/UnrealNetwork.h"
 #include "Engine/ActorChannel.h"
@@ -19,27 +22,63 @@ UGISInventoryBaseComponent::UGISInventoryBaseComponent(const FObjectInitializer&
 	: Super(ObjectInitializer)
 {
 	bWantsInitializeComponent = true;
+	bAutoRegister = true;
 }
 
 
 void UGISInventoryBaseComponent::InitializeComponent()
 {
 	Super::InitializeComponent();
-	InitializeInventoryTabs();
-	if (InventoryContainerClass)
-	{
-		InventoryContainer = ConstructObject<UGISContainerBaseWidget>(InventoryContainerClass, this);
-		if (InventoryContainer)
-		{
-			ULocalPlayer* Player = World->GetFirstLocalPlayerFromController(); //temporary
-			InventoryContainer->SetPlayerContext(FLocalPlayerContext(Player)); //temporary
-			InventoryContainer->Initialize();
-			InventoryContainer->InventoryComponent = this;
+	//if (!bHasBeenInitialized)
+	//{
+		ENetRole CurrentRole = GetOwnerRole();
+		ENetMode CurrentNetMode = GetNetMode();
 
-			//call last
-			InventoryContainer->InitializeContainer();
+
+		if (CurrentRole == ROLE_Authority || CurrentNetMode == ENetMode::NM_Standalone)
+			InitializeInventoryTabs();
+
+		if (CurrentRole < ROLE_Authority || CurrentNetMode == ENetMode::NM_Standalone)
+		{
+			if (InventoryContainerClass)
+			{
+				UObject* Outer = GetWorld()->GetGameInstance() ? StaticCast<UObject*>(GetWorld()->GetGameInstance()) : StaticCast<UObject*>(GetWorld());
+				InventoryContainer = ConstructObject<UGISContainerBaseWidget>(InventoryContainerClass, Outer);
+				if (InventoryContainer)
+				{
+					ULocalPlayer* Player = World->GetFirstLocalPlayerFromController(); //temporary
+					InventoryContainer->SetPlayerContext(FLocalPlayerContext(Player)); //temporary
+					InventoryContainer->Initialize();
+					InventoryContainer->InventoryComponent = this;
+
+					//call last
+					InventoryContainer->InitializeContainer();
+				}
+			}
 		}
-	}
+
+		if (CurrentRole == ROLE_Authority || CurrentNetMode == ENetMode::NM_Standalone)
+			ClientLoadInventory();
+	//}
+}
+void UGISInventoryBaseComponent::OnRep_InventoryCreated()
+{
+	OnInventoryLoaded.Broadcast();
+	//if (SlotUpdateInfo.SlotComponent.IsValid())
+	//	SlotUpdateInfo.SlotData = SlotUpdateInfo.SlotComponent->Tabs.InventoryTabs[SlotUpdateInfo.TabIndex].TabSlots[SlotUpdateInfo.SlotIndex].ItemData;
+	//OnItemAdded.Broadcast(SlotUpdateInfo);
+}
+
+void UGISInventoryBaseComponent::OnRep_SlotUpdate()
+{
+//	if (SlotUpdateInfo.SlotComponent.IsValid())
+//		SlotUpdateInfo.SlotData = SlotUpdateInfo.SlotComponent->Tabs.InventoryTabs[SlotUpdateInfo.TabIndex].TabSlots[SlotUpdateInfo.SlotIndex].ItemData;
+	OnItemAdded.Broadcast(SlotUpdateInfo);
+}
+
+void UGISInventoryBaseComponent::OnRep_SlotSwap()
+{
+	OnItemSlotSwapped.Broadcast(SlotSwapInfo);
 }
 void UGISInventoryBaseComponent::PostInitProperties()
 {
@@ -92,13 +131,15 @@ void UGISInventoryBaseComponent::AddItemToInventory(class UGISItemData* ItemIn)
 				if (Slot.ItemData == nullptr)
 				{
 					Slot.ItemData = ItemIn;
-					Slot.ItemData->OnItemRemovedFromSlot();
-					FGISSlotUpdateData SlotUpdateData;
-					SlotUpdateData.TabIndex = TabInfo.TabIndex;
-					SlotUpdateData.SlotIndex = Slot.SlotIndex;
-					SlotUpdateData.SlotData = Slot.ItemData;
-					SlotUpdateData.SlotComponent = this;
-					ClientUpdateInventory(SlotUpdateData);
+					//Slot.ItemData->OnItemRemovedFromSlot();
+					SlotUpdateInfo.TabIndex = TabInfo.TabIndex;
+					SlotUpdateInfo.SlotIndex = Slot.SlotIndex;
+					SlotUpdateInfo.SlotData = Slot.ItemData;
+					SlotUpdateInfo.SlotComponent = this;
+					if (GetNetMode() == ENetMode::NM_Standalone)
+						OnItemAdded.Broadcast(SlotUpdateInfo);
+
+					ClientUpdateInventory(SlotUpdateInfo);
 					return;
 				}
 			}
@@ -127,7 +168,7 @@ void UGISInventoryBaseComponent::AddItemOnSlot(const FGISSlotInfo& TargetSlotTyp
 
 
 	//Tabs.InventoryTabs[TargetSlotType.SlotTabIndex].TabSlots[TargetSlotType.SlotTabIndex].ItemData
-	if (Tabs.InventoryTabs[TargetSlotType.SlotTabIndex].TabSlots[TargetSlotType.SlotIndex].ItemData == nullptr)
+	if (TargetSlotType.CurrentInventoryComponent->Tabs.InventoryTabs[TargetSlotType.SlotTabIndex].TabSlots[TargetSlotType.SlotIndex].ItemData == nullptr)
 	{
 
 		UGISItemData* TargetItem = LastSlotType.CurrentInventoryComponent->Tabs.InventoryTabs[LastSlotType.SlotTabIndex].TabSlots[LastSlotType.SlotIndex].ItemData;
@@ -137,7 +178,7 @@ void UGISInventoryBaseComponent::AddItemOnSlot(const FGISSlotInfo& TargetSlotTyp
 		LastSlotType.CurrentInventoryComponent->Tabs.InventoryTabs[LastSlotType.SlotTabIndex].TabSlots[LastSlotType.SlotIndex].ItemData = nullptr;
 		
 		TargetItem->OnItemAddedToSlot();
-		FGISSlotSwapInfo SlotSwapInfo;
+		//FGISSlotSwapInfo SlotSwapInfo;
 
 		SlotSwapInfo.LastSlotIndex = LastSlotType.SlotIndex;
 		SlotSwapInfo.LastTabIndex = LastSlotType.SlotTabIndex;
@@ -147,6 +188,8 @@ void UGISInventoryBaseComponent::AddItemOnSlot(const FGISSlotInfo& TargetSlotTyp
 		SlotSwapInfo.TargetTabIndex = TargetSlotType.SlotTabIndex;
 		SlotSwapInfo.TargetSlotData = TargetItem;
 		SlotSwapInfo.TargetSlotComponent = TargetSlotType.CurrentInventoryComponent;
+		if (GetNetMode() == ENetMode::NM_Standalone)
+			OnItemSlotSwapped.Broadcast(SlotSwapInfo);
 		ClientSlotSwap(SlotSwapInfo);
 	}
 	else
@@ -155,11 +198,11 @@ void UGISInventoryBaseComponent::AddItemOnSlot(const FGISSlotInfo& TargetSlotTyp
 		UGISItemData* LastItem = TargetSlotType.CurrentInventoryComponent->Tabs.InventoryTabs[TargetSlotType.SlotTabIndex].TabSlots[TargetSlotType.SlotIndex].ItemData; //Tabs.InventoryTabs[TargetSlotType.SlotTabIndex].TabSlots[TargetSlotType.SlotIndex].ItemData;
 
 		TargetSlotType.CurrentInventoryComponent->Tabs.InventoryTabs[TargetSlotType.SlotTabIndex].TabSlots[TargetSlotType.SlotIndex].ItemData = TargetItem;
-		LastSlotType.CurrentInventoryComponent->Tabs.InventoryTabs[LastSlotType.SlotTabIndex].TabSlots[LastSlotType.SlotIndex].ItemData = nullptr;
+		LastSlotType.CurrentInventoryComponent->Tabs.InventoryTabs[LastSlotType.SlotTabIndex].TabSlots[LastSlotType.SlotIndex].ItemData = LastItem;
 		TargetItem->OnItemAddedToSlot();
 		LastItem->OnItemAddedToSlot();
 
-		FGISSlotSwapInfo SlotSwapInfo;
+		//FGISSlotSwapInfo SlotSwapInfo;
 		SlotSwapInfo.LastSlotIndex = LastSlotType.SlotIndex;
 		SlotSwapInfo.LastTabIndex = LastSlotType.SlotTabIndex;
 		SlotSwapInfo.LastSlotData = LastItem;
@@ -168,6 +211,8 @@ void UGISInventoryBaseComponent::AddItemOnSlot(const FGISSlotInfo& TargetSlotTyp
 		SlotSwapInfo.TargetTabIndex = TargetSlotType.SlotTabIndex;
 		SlotSwapInfo.TargetSlotData = TargetItem;
 		SlotSwapInfo.TargetSlotComponent = TargetSlotType.CurrentInventoryComponent;
+		if (GetNetMode() == ENetMode::NM_Standalone)
+			OnItemSlotSwapped.Broadcast(SlotSwapInfo);
 		ClientSlotSwap(SlotSwapInfo);
 	}
 }
@@ -186,13 +231,135 @@ void UGISInventoryBaseComponent::RemoveItem(const FGISSlotInfo& TargetSlotType)
 
 }
 
-void UGISInventoryBaseComponent::ClientUpdateInventory_Implementation(const FGISSlotUpdateData& SlotUpdateInfo)
+void UGISInventoryBaseComponent::LootItems(class AGISPickupActor* LootContainer)
 {
-	OnItemAdded.Broadcast(SlotUpdateInfo);
+	if (GetOwnerRole() < ROLE_Authority)
+	{
+		ServerLootItems(LootContainer);
+	}
+	else
+	{
+		if (!LootContainer)
+			return;
+
+		LootContainer->SetOwner(GetOwner());
+
+		for (UGISItemData* Item : LootContainer->ItemToLoot)
+		{
+			AddItemToInventory(Item);
+		}
+	}
 }
-void UGISInventoryBaseComponent::ClientSlotSwap_Implementation(const FGISSlotSwapInfo& SlotSwapInfo)
+void UGISInventoryBaseComponent::ServerLootItems_Implementation(class AGISPickupActor* LootContainer)
 {
-	OnItemSlotSwapped.Broadcast(SlotSwapInfo);
+	LootItems(LootContainer);
+}
+bool UGISInventoryBaseComponent::ServerLootItems_Validate(class AGISPickupActor* LootContainer)
+{
+	return true;
+}
+
+
+void UGISInventoryBaseComponent::GetLootContainer(class AGISPickupActor* LootContainer)
+{
+	//if (GetOwnerRole() < ROLE_Authority)
+	//{
+	//	ServerGetLootContainer(LootContainer);
+	//}
+	//else
+//	{
+		if (LootContainer)
+		{
+			UObject* Outer = GetWorld()->GetGameInstance() ? StaticCast<UObject*>(GetWorld()->GetGameInstance()) : StaticCast<UObject*>(GetWorld());
+			LootWidget = ConstructObject<UGISLootContainerBaseWidget>(LootWidgetClass, Outer);
+			if (LootWidget)
+			{
+				ULocalPlayer* Player = GetWorld()->GetFirstLocalPlayerFromController(); //temporary
+				LootWidget->SetPlayerContext(FLocalPlayerContext(Player)); //temporary
+				LootWidget->Initialize();
+				int32 ItemCount = LootContainer->ItemToLoot.Num();
+				TArray<FGISLootSlotInfo> LootSlotInfos;
+				for (int32 Index = 0; Index < ItemCount; Index++)
+				{
+					FGISLootSlotInfo LootInfo;
+					LootInfo.SlotIndex = Index;
+					LootInfo.SlotData = LootContainer->ItemToLoot[Index];
+					LootInfo.OwningPickupActor = LootContainer;
+					LootSlotInfos.Add(LootInfo);
+				}
+				LootWidget->ItemsInfos = LootSlotInfos;
+				LootWidget->OwningPickupActor = LootContainer;
+				LootWidget->InitializeLootWidget();
+				LootWidget->AddToViewport();
+			}
+			//LootContainer->InteractingInventory = this;
+			//LootContainer->OpenLootWindow();
+		}
+//	}
+}
+
+void UGISInventoryBaseComponent::LootAllItems(class AGISPickupActor* LootContainer)
+{
+	//if (GetOwnerRole() < ROLE_Authority)
+	//{
+	//	SeverLootOneItem
+	//}
+	//else
+	//{
+		if (LootContainer)
+		{
+			for (UGISItemData* Item : LootContainer->ItemToLoot)
+			{
+				AddItemToInventory(Item);
+			}
+		}
+	//}
+}
+void UGISInventoryBaseComponent::LootOneItem(int32 ItemIndex, class AGISPickupActor* LootContainer)
+{
+	if (GetOwnerRole() < ROLE_Authority)
+	{
+		SeverLootOneItem(ItemIndex, LootContainer);
+	}
+	else
+	{
+		if (LootContainer)
+		{
+			AddItemToInventory(LootContainer->ItemToLoot[ItemIndex]);
+		}
+	}
+}
+void UGISInventoryBaseComponent::SeverLootOneItem_Implementation(int32 ItemIndex, class AGISPickupActor* LootContainer)
+{
+	LootOneItem(ItemIndex, LootContainer);
+}
+bool UGISInventoryBaseComponent::SeverLootOneItem_Validate(int32 ItemIndex, class AGISPickupActor* LootContainer)
+{
+	return true;
+}
+
+
+void UGISInventoryBaseComponent::ServerGetLootContainer_Implementation(class AGISPickupActor* LootContainer)
+{
+	GetLootContainer(LootContainer);
+}
+bool UGISInventoryBaseComponent::ServerGetLootContainer_Validate(class AGISPickupActor* LootContainer)
+{
+	return true;
+}
+
+void UGISInventoryBaseComponent::ClientUpdateInventory_Implementation(const FGISSlotUpdateData& SlotUpdateInfoIn)
+{
+	OnItemAdded.Broadcast(SlotUpdateInfoIn);
+}
+void UGISInventoryBaseComponent::ClientSlotSwap_Implementation(const FGISSlotSwapInfo& SlotSwapInfoIn)
+{
+	OnItemSlotSwapped.Broadcast(SlotSwapInfoIn);
+}
+
+void UGISInventoryBaseComponent::ClientLoadInventory_Implementation()
+{
+	OnInventoryLoaded.Broadcast();
 }
 
 void UGISInventoryBaseComponent::PostInventoryInitialized()
@@ -205,6 +372,8 @@ void UGISInventoryBaseComponent::GetLifetimeReplicatedProps(TArray< class FLifet
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME_CONDITION(UGISInventoryBaseComponent, Tabs, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(UGISInventoryBaseComponent, SlotUpdateInfo, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(UGISInventoryBaseComponent, SlotSwapInfo, COND_OwnerOnly);
 }
 
 bool UGISInventoryBaseComponent::ReplicateSubobjects(class UActorChannel *Channel, class FOutBunch *Bunch, FReplicationFlags *RepFlags)
@@ -220,6 +389,19 @@ bool UGISInventoryBaseComponent::ReplicateSubobjects(class UActorChannel *Channe
 				WroteSomething |= Channel->ReplicateSubobject(const_cast<UGISItemData*>(SlotItem.ItemData), *Bunch, *RepFlags);
 			}
 		}
+	}
+
+	if (SlotUpdateInfo.SlotData)
+	{
+		WroteSomething |= Channel->ReplicateSubobject(const_cast<UGISItemData*>(SlotUpdateInfo.SlotData), *Bunch, *RepFlags);
+	}
+	if (SlotSwapInfo.LastSlotData)
+	{
+		WroteSomething |= Channel->ReplicateSubobject(const_cast<UGISItemData*>(SlotSwapInfo.LastSlotData), *Bunch, *RepFlags);
+	}
+	if (SlotSwapInfo.TargetSlotData)
+	{
+		WroteSomething |= Channel->ReplicateSubobject(const_cast<UGISItemData*>(SlotSwapInfo.TargetSlotData), *Bunch, *RepFlags);
 	}
 	return WroteSomething;
 }

@@ -29,6 +29,21 @@ namespace EGISSlotType
 }
 
 USTRUCT()
+struct GAMEINVENTORYSYSTEM_API FGISLootSlotInfo
+{
+	GENERATED_USTRUCT_BODY()
+public:
+	UPROPERTY(BlueprintReadOnly)
+		int32 SlotIndex;
+	UPROPERTY(BlueprintReadOnly)
+	class UGISItemData* SlotData;
+	UPROPERTY(BlueprintReadOnly)
+		TWeakObjectPtr<class UGISInventoryBaseComponent> SlotComponent;
+	UPROPERTY(BlueprintReadOnly)
+		class AGISPickupActor* OwningPickupActor;
+};
+
+USTRUCT()
 struct GAMEINVENTORYSYSTEM_API FGISSlotUpdateData
 {
 	GENERATED_USTRUCT_BODY()
@@ -38,7 +53,7 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 		int32 SlotIndex;
 	UPROPERTY(BlueprintReadOnly)
-	class UGISItemData* SlotData;
+		class UGISItemData* SlotData;
 	UPROPERTY(BlueprintReadOnly)
 		TWeakObjectPtr<class UGISInventoryBaseComponent> SlotComponent;
 };
@@ -53,7 +68,7 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 		int32 LastSlotIndex;
 	UPROPERTY(BlueprintReadOnly)
-		class UGISItemData* LastSlotData;
+	class UGISItemData* LastSlotData;
 	UPROPERTY(BlueprintReadOnly)
 		TWeakObjectPtr<class UGISInventoryBaseComponent> LastSlotComponent;
 	UPROPERTY(BlueprintReadOnly)
@@ -61,7 +76,7 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 		int32 TargetSlotIndex;
 	UPROPERTY(BlueprintReadOnly)
-		class UGISItemData* TargetSlotData;
+	class UGISItemData* TargetSlotData;
 	UPROPERTY(BlueprintReadOnly)
 		TWeakObjectPtr<class UGISInventoryBaseComponent> TargetSlotComponent;
 };
@@ -76,7 +91,7 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 		int32 SlotTabIndex;
 	UPROPERTY(BlueprintReadWrite)
-		class UGISItemData* ItemData;
+	class UGISItemData* ItemData;
 
 	UPROPERTY(BlueprintReadWrite)
 		TWeakObjectPtr<class UGISInventoryBaseComponent> CurrentInventoryComponent;
