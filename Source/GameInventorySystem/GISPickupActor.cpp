@@ -16,6 +16,7 @@ AGISPickupActor::AGISPickupActor(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
 	bReplicates = true;
+	bIsCurrentlyBeingLooted = false;
 }
 
 void AGISPickupActor::BeginPlay()
@@ -49,23 +50,23 @@ void AGISPickupActor::LootSingleItem(int32 ItemIndexIn)
 //		InteractingInventory->LootOneItem(ItemIndexIn, this);
 //	}
 }
-void AGISPickupActor::GetLifetimeReplicatedProps(TArray< class FLifetimeProperty > & OutLifetimeProps) const
-{
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
-	DOREPLIFETIME(AGISPickupActor, ItemToLoot);
-}
+//void AGISPickupActor::GetLifetimeReplicatedProps(TArray< class FLifetimeProperty > & OutLifetimeProps) const
+//{
+//	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+//
+//	//DOREPLIFETIME(AGISPickupActor, ItemToLoot);
+//}
 bool AGISPickupActor::ReplicateSubobjects(class UActorChannel *Channel, class FOutBunch *Bunch, FReplicationFlags *RepFlags)
 {
 	bool WroteSomething = Super::ReplicateSubobjects(Channel, Bunch, RepFlags);
 
-	for (const UGISItemData* SlotItem : ItemToLoot)
-	{
-		if (SlotItem)
-		{
-			WroteSomething |= Channel->ReplicateSubobject(const_cast<UGISItemData*>(SlotItem), *Bunch, *RepFlags);
-		}
-	}
+	//for (const UGISItemData* SlotItem : ItemToLoot)
+	//{
+	//	if (SlotItem)
+	//	{
+	//		WroteSomething |= Channel->ReplicateSubobject(const_cast<UGISItemData*>(SlotItem), *Bunch, *RepFlags);
+	//	}
+	//}
 	return WroteSomething;
 }
 void AGISPickupActor::GetSubobjectsWithStableNamesForNetworking(TArray<UObject*>& Objs)

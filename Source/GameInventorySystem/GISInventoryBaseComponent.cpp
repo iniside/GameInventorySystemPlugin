@@ -259,7 +259,7 @@ void UGISInventoryBaseComponent::LootItems(class AGISPickupActor* LootContainer)
 
 		LootContainer->SetOwner(GetOwner());
 
-		for (UGISItemData* Item : LootContainer->ItemToLoot)
+		for (UGISItemData* Item : LootedItems)
 		{
 			AddItemToInventory(Item);
 		}
@@ -285,14 +285,13 @@ void UGISInventoryBaseComponent::GetLootContainer(class AGISPickupActor* LootCon
 	{
 		if (!LootContainer->bIsCurrentlyBeingLooted)
 		{
+			CurrentPickupActor = LootContainer;
 			LootContainer->bIsCurrentlyBeingLooted = true;
 			for (UGISItemData* Item : LootContainer->ItemToLoot)
 			{
 				UGISItemData* test = ConstructObject<UGISItemData>(Item->GetClass(), this, NAME_None, RF_NoFlags, Item);
 				LootedItems.Add(test);
 			}
-			//LootedItems = LootContainer->ItemToLoot;
-			CurrentPickupActor = LootContainer;
 			ClientConstructWidget();
 		}
 	}
@@ -303,7 +302,7 @@ void UGISInventoryBaseComponent::OnRep_LootedItems()
 }
 void UGISInventoryBaseComponent::OnRep_PickupActor()
 {
-	ConstructLootPickingWidget();
+	//ConstructLootPickingWidget();
 }
 void UGISInventoryBaseComponent::ClientConstructWidget_Implementation()
 {
@@ -311,7 +310,7 @@ void UGISInventoryBaseComponent::ClientConstructWidget_Implementation()
 }
 void UGISInventoryBaseComponent::ConstructLootPickingWidget()
 {
-	if (LootedItems.Num() > 0)
+	if (CurrentPickupActor)
 	{
 		if (LootWidget)
 		{
@@ -364,14 +363,20 @@ void UGISInventoryBaseComponent::LootOneItem(int32 ItemIndex)
 	{
 		if (CurrentPickupActor)
 		{
-			AddItemToInventory(LootedItems[ItemIndex]);
-			//ok we removed one item. We need to rconstruct widgets, indexes etc, to make sure arry
-			//have proper indexes in first place.
-			LootedItems.RemoveAt(ItemIndex, 1, true);
-			CurrentPickupActor->ItemToLoot.RemoveAt(ItemIndex, 1, true);
+		//	UGISItemData* test = ConstructObject<UGISItemData>(CurrentPickupActor->ItemToLoot[ItemIndex]->GetClass(), this, NAME_None, RF_NoFlags, CurrentPickupActor->ItemToLoot[ItemIndex]);
+			
+			//if it is not valid index both arrays, then something is wrong.
+			if (LootedItems.IsValidIndex(ItemIndex) && CurrentPickupActor->ItemToLoot.IsValidIndex(ItemIndex))
+			{
+				AddItemToInventory(LootedItems[ItemIndex]);
+				//ok we removed one item. We need to rconstruct widgets, indexes etc, to make sure arry
+				//have proper indexes in first place.
+				LootedItems.RemoveAt(ItemIndex, 1, true);
+				CurrentPickupActor->ItemToLoot.RemoveAt(ItemIndex, 1, true);
+			}
 			//reconstruct widget.
 		//	CurrentPickupActor->ItemToLoot = LootedItems;
-			ClientReconstructLootWidget();
+		//	ClientReconstructLootWidget();
 		}
 	}
 }

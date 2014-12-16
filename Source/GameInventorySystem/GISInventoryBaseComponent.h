@@ -22,6 +22,16 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGISOnItemLooted);
 
 	Though of course setting up gameplay tags is bit of hassle, they should be able to give
 	very fine controll over interactions.
+
+
+
+	Another thing. I don't like the fact that inventory and other things are updated by OnRep_ functions.
+	They work, the problem is that state of client side inventory is not updated until OnRep function is fired.
+
+	I have to add some simple client side prediction. Especially for looting. Here it can easily cause out of bounds 
+	errors for array if UI is updated to late and player click on item, which is not already in inventory.
+
+	Or.. I can just check for valid index in array.
 */
 
 UCLASS(hidecategories = (Object, LOD, Lighting, Transform, Sockets, TextureStreaming), editinlinenew, meta = (BlueprintSpawnableComponent))
@@ -29,7 +39,7 @@ class GAMEINVENTORYSYSTEM_API UGISInventoryBaseComponent : public UActorComponen
 {
 	GENERATED_UCLASS_BODY()
 public:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory Options")
 		TArray <FGISSlotsInTab> InitialTabInfo;
 
 	/*
@@ -50,6 +60,13 @@ public:
 	*/
 	UPROPERTY(EditAnywhere, Category = "Inventory Options")
 		bool bCanActivateItemInInventory;
+
+	/*
+		Max distance from which you can pickup items in this inventory.
+		If player is further than this value, looting window will automatically close.
+	*/
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory Options")
+		float MaxLootingDistance;
 
 	/*
 		RepRetry - inventory is in general to important it must be replicated!
