@@ -23,6 +23,12 @@ UGISInventoryBaseComponent::UGISInventoryBaseComponent(const FObjectInitializer&
 {
 	bWantsInitializeComponent = true;
 	bAutoRegister = true;
+	PrimaryComponentTick.bCanEverTick = true;
+	PrimaryComponentTick.bAllowTickOnDedicatedServer = true;
+	PrimaryComponentTick.bRunOnAnyThread = true;
+	PrimaryComponentTick.bStartWithTickEnabled = false;
+	bAllowConcurrentTick = true;
+	OnItemLooted.AddDynamic(this, &UGISInventoryBaseComponent::ConstructLootPickingWidget);
 }
 
 
@@ -34,7 +40,7 @@ void UGISInventoryBaseComponent::InitializeComponent()
 		ENetRole CurrentRole = GetOwnerRole();
 		ENetMode CurrentNetMode = GetNetMode();
 
-
+		//PrimaryComponentTick.bStartWithTickEnabled = bTickInventory;
 		if (CurrentRole == ROLE_Authority || CurrentNetMode == ENetMode::NM_Standalone)
 			InitializeInventoryTabs();
 
@@ -68,13 +74,24 @@ void UGISInventoryBaseComponent::InitializeComponent()
 					LootWidget->SetVisibility(ESlateVisibility::Hidden);
 				}
 			}
-
-			OnItemLooted.AddDynamic(this, &UGISInventoryBaseComponent::ConstructLootPickingWidget);
 		}
 
 		if (CurrentRole == ROLE_Authority || CurrentNetMode == ENetMode::NM_Standalone)
 			ClientLoadInventory();
 	//}
+}
+void UGISInventoryBaseComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction)
+{
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+	if (CurrentPickupActor)
+	{
+		float distance = FVector::Dist(CurrentPickupActor->GetActorLocation(), GetOwner()->GetActorLocation());
+		if (distance > MaxLootingDistance)
+		{
+			ClientHideLootingWidget();
+			SetComponentTickEnabled(false);
+		}
+	}
 }
 void UGISInventoryBaseComponent::OnRep_InventoryCreated()
 {
@@ -292,7 +309,8 @@ void UGISInventoryBaseComponent::GetLootContainer(class AGISPickupActor* LootCon
 				UGISItemData* test = ConstructObject<UGISItemData>(Item->GetClass(), this, NAME_None, RF_NoFlags, Item);
 				LootedItems.Add(test);
 			}
-			ClientConstructWidget();
+			SetComponentTickEnabled(true);
+			//ClientConstructWidget();
 		}
 	}
 }
@@ -417,7 +435,11 @@ void UGISInventoryBaseComponent::ClientLoadInventory_Implementation()
 {
 	OnInventoryLoaded.Broadcast();
 }
-
+void UGISInventoryBaseComponent::ClientHideLootingWidget_Implementation()
+{
+	if (LootWidget)
+		LootWidget->SetVisibility(ESlateVisibility::Hidden);
+}
 void UGISInventoryBaseComponent::PostInventoryInitialized()
 {
 

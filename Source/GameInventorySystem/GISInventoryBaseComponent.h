@@ -166,6 +166,8 @@ public:
 	virtual void InitializeComponent() override;
 	virtual void PostInitProperties() override;
 
+	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction) override;
+
 	/*
 		To easily get current inventory array for widget initialization.
 	*/
@@ -267,6 +269,10 @@ public:
 
 	UFUNCTION(Client, Reliable)
 		void ClientConstructWidget();
+
+	UFUNCTION(Client, Reliable)
+		void ClientHideLootingWidget();
+
 	void PostInventoryInitialized();
 
 

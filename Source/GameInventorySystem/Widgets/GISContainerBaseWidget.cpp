@@ -65,8 +65,9 @@ void UGISContainerBaseWidget::InitializeInventory()
 {
 	if (InventoryComponent && InventoryTabs.Num() == 0)
 	{
+		UWorld* WorldIn = InventoryComponent->GetWorld();
 		int32 IndexCounter = 0;
-		UObject* Outer = GetWorld()->GetGameInstance() ? StaticCast<UObject*>(GetWorld()->GetGameInstance()) : StaticCast<UObject*>(GetWorld());
+		UObject* Outer = WorldIn->GetGameInstance() ? StaticCast<UObject*>(WorldIn->GetGameInstance()) : StaticCast<UObject*>(WorldIn);
 		for (const FGISTabInfo& Tab : InventoryComponent->Tabs.InventoryTabs)
 		{
 			if (TabClass && SlotClass)
@@ -75,7 +76,7 @@ void UGISContainerBaseWidget::InitializeInventory()
 				UGISTabBaseWidget* tabWidget = ConstructObject<UGISTabBaseWidget>(TabClass, Outer);
 				if (tabWidget)
 				{
-					ULocalPlayer* Player = InventoryComponent->GetWorld()->GetFirstLocalPlayerFromController(); //temporary
+					ULocalPlayer* Player = WorldIn->GetFirstLocalPlayerFromController(); //temporary
 					tabWidget->SetPlayerContext(FLocalPlayerContext(Player)); //temporary
 					tabWidget->Initialize();
 					tabWidget->TabInfo = Tab;
@@ -86,7 +87,7 @@ void UGISContainerBaseWidget::InitializeInventory()
 						UGISSlotBaseWidget* slotWidget = ConstructObject<UGISSlotBaseWidget>(SlotClass, this);
 						if (slotWidget)
 						{
-							ULocalPlayer* Player = InventoryComponent->GetWorld()->GetFirstLocalPlayerFromController(); //temporary
+							ULocalPlayer* Player = WorldIn->GetFirstLocalPlayerFromController(); //temporary
 							slotWidget->SetPlayerContext(FLocalPlayerContext(Player)); //temporary
 							slotWidget->Initialize();
 							slotWidget->SlotInfo = Slot;
